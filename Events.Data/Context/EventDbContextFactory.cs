@@ -16,7 +16,7 @@
         {
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", false, true)
+                .AddJsonFile("Config.jsonc", false, true)
                 .Build();
 
             var optionsBuilder = new DbContextOptionsBuilder()
