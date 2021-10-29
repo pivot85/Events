@@ -6,9 +6,9 @@
     using Events.Data.Models;
 
     /// <summary>
-    /// Implementation Contract of <see cref="EventDataAccessLayer"/>
+    /// Implementation Contract of <see cref="EventsDataAccessLayer"/>.
     /// </summary>
-    public interface IEventDataAccessLayer
+    public interface IEventsDataAccessLayer
     {
         // Read
         public Task<IEnumerable<Event>> GetAllEvents();
@@ -22,19 +22,19 @@
         public Task<Event> GetEventByTitle(ulong guildId, string title);
 
         // Create
-        public Task CreateNewEvent(Guid eventId, ulong guildId, ulong organiserId, string eventTitle,
+        public Task CreateNewEvent(Guid eventId, ulong guildId, ulong organiser, string eventTitle,
             DateTime eventStart,
             TimeSpan eventDuration, ulong categoryId, ulong textChannelId, ulong voiceChannelId, ulong controlPanelId,
-            ulong stewardRankId, ulong speakerRankId, ulong attendeeRankId, ulong cosmeticRankId, bool eventComplete);
+            ulong stewardRoleId, ulong speakerRoleId, ulong attendeeRoleId, ulong cosmeticRoleId, bool eventComplete);
 
         // Update
-        public Task UpdateEventOrganiser(Guid eventId, ulong organiserId);
+        public Task UpdateEventOrganiser(Guid eventId, ulong organiser);
 
-        public Task UpdateEventTitle(Guid eventId, string eventTitle);
+        public Task UpdateTitle(Guid eventId, string eventTitle);
 
-        public Task UpdateEventStart(Guid eventId, DateTime eventStart);
+        public Task UpdateStart(Guid eventId, DateTime eventStart);
 
-        public Task UpdateEventDuration(Guid eventId, TimeSpan eventDuration);
+        public Task UpdateDuration(Guid eventId, TimeSpan eventDuration);
 
         public Task UpdateCategoryId(Guid eventId, ulong categoryId);
 
@@ -44,13 +44,13 @@
 
         public Task UpdateControlPanelId(Guid eventId, ulong controlPanelId);
 
-        public Task UpdateStewardRankId(Guid eventId, ulong stewardRankId);
+        public Task UpdateStewardRoleId(Guid eventId, ulong stewardRoleId);
 
-        public Task UpdateSpeakerRankId(Guid eventId, ulong speakerRankId);
+        public Task UpdateSpeakerRoleId(Guid eventId, ulong speakerRoleId);
 
-        public Task UpdateAttendeeRankId(Guid eventId, ulong attendeeRankId);
+        public Task UpdateAttendeeRoleId(Guid eventId, ulong attendeeRoleId);
 
-        public Task UpdateCosmeticRankId(Guid eventId, ulong cosmeticRankId);
+        public Task UpdateCosmeticRoleId(Guid eventId, ulong cosmeticRoleId);
 
         public Task UpdateEventCompletionStatus(Guid eventId, bool eventComplete);
 

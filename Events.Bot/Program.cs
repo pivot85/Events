@@ -1,17 +1,17 @@
 ﻿using System;
-using System.IO;
-using System.Threading.Tasks;
 using Discord;
 using Discord.Addons.Hosting;
-using Discord.Commands;
 using Discord.WebSocket;
 using Events.Bot.Handlers;
 using Events.Bot.Utils;
+using Events.Data.Context;
+using Events.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Events;
+using Events.Data.DataAccessLayer;
 
 namespace Events.Bot
 {
@@ -60,9 +60,17 @@ namespace Events.Bot
                 .UseDualCommandService()
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddSingleton<LogAdapter<DualCommandService>>();
-                    services.AddHostedService<CommandHandler>();
-                    services.AddHostedService<ApplicationCommandCoordinator>();
+                    services
+                    .AddSingleton<LogAdapter<DualCommandService>>()
+                    .AddDbContextFactory<EventsDbContext>(options =>
+                            options
+                            .UseMySql(
+                                context.Configuration.GetValue<string>("Database"),
+                                new MySqlServerVersion(new Version(8, 0, 26))
+                                ))
+                        .AddSingleton<EventsDataAccessLayer>()
+                    .AddHostedService<CommandHandler>()
+                    .AddHostedService<ApplicationCommandCoordinator>();
                 });
     }
 }

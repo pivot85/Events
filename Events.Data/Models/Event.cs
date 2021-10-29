@@ -28,7 +28,7 @@
         public string Title { get; set; }
 
         /// <summary>
-        /// Gets or Sets the StartTime for the event.
+        /// Gets or Sets the Start for the event.
         /// </summary>
         public DateTime Start { get; set; }
 

@@ -11,15 +11,15 @@
     /// <summary>
     /// The Data Access Layer for the Events Table.
     /// </summary>
-    public class EventDataAccessLayer : IEventDataAccessLayer
+    public class EventsDataAccessLayer : IEventsDataAccessLayer
     {
         private readonly IDbContextFactory<EventsDbContext> _contextFactory;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="EventDataAccessLayer"/> class.
+        /// Initializes a new instance of the <see cref="EventsDataAccessLayer"/> class.
         /// </summary>
         /// <param name="contextFactory">The <see cref="IDbContextFactory{TContext}"/> to be injected.</param>
-        public EventDataAccessLayer(IDbContextFactory<EventsDbContext> contextFactory)
+        public EventsDataAccessLayer(IDbContextFactory<EventsDbContext> contextFactory)
         {
             _contextFactory = contextFactory;
         }
@@ -51,41 +51,41 @@
         /// <summary>
         /// Get all events in a guild.
         /// </summary>
-        /// <param name="guildId">The guild in which the events are being ran.</param>
+        /// <param name="guild">The guild in which the events are being ran.</param>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        public async Task<IEnumerable<Event>> GetAllEventsByGuildAsync(ulong guildId)
+        public async Task<IEnumerable<Event>> GetAllEventsByGuildAsync(ulong guild)
         {
             using var context = _contextFactory.CreateDbContext();
             return await context.Events
-                .Where(x => x.GuildId == guildId)
+                .Where(x => x.Guild == guild)
                 .ToListAsync();
         }
 
         /// <summary>
         /// Get all events by their completion value.
         /// </summary>
-        /// <param name="guildId">The guild in which the events are bring run.</param>
+        /// <param name="guild">The guild in which the events are bring run.</param>
         /// <param name="completionStatus">A bool representing the status.</param>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        public async Task<IEnumerable<Event>> GetEventsByCompletionAsync(ulong guildId, bool completionStatus)
+        public async Task<IEnumerable<Event>> GetEventsByCompletionAsync(ulong guild, bool completionStatus)
         {
             using var context = _contextFactory.CreateDbContext();
             return await context.Events
-                .Where(x => x.GuildId == guildId && x.IsCompleted == completionStatus)
+                .Where(x => x.Guild == guild && x.IsCompleted == completionStatus)
                 .ToListAsync();
         }
 
         /// <summary>
         /// Get an event by its name and guild.
         /// </summary>
-        /// <param name="guildId">The guild that the event is run in.</param>
+        /// <param name="guild">The guild that the event is run in.</param>
         /// <param name="title">The title of the Event.</param>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        public async Task<Event> GetEventByTitle(ulong guildId, string title)
+        public async Task<Event> GetEventByTitle(ulong guild, string title)
         {
             using var context = _contextFactory.CreateDbContext();
             return await context.Events
-                .Where(x => x.GuildId == guildId && x.EventTitle == title)
+                .Where(x => x.Guild == guild && x.Title == title)
                 .FirstOrDefaultAsync();
         }
 
@@ -93,42 +93,42 @@
         /// Create a new event.
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
-        /// <param name="guildId">The Id of the guild that the event is run.</param>
-        /// <param name="organiserId">The Id of the organiser of the event.</param>
-        /// <param name="eventTitle">The title of the event.</param>
+        /// <param name="guild">The Id of the guild that the event is run.</param>
+        /// <param name="Organiser">The Id of the organiser of the event.</param>
+        /// <param name="title">The title of the event.</param>
         /// <param name="eventStart">The start-time of the event.</param>
         /// <param name="eventDuration">The duration of the event.</param>
         /// <param name="categoryId">The Id of the category of the event.</param>
         /// <param name="textChannelId">The Id of the generated discussion channel of the event.</param>
         /// <param name="voiceChannelId">The Id of the generated voice channel of the event. </param>
         /// <param name="controlPanelId">The Id of the Control Panel Channel of the event.</param>
-        /// <param name="stewardRankId">The Id of the Steward (Event Moderator) Rank. </param>
-        /// <param name="speakerRankId">The Id of the Speaker Rank.</param>
-        /// <param name="attendeeRankId">The Id of the Attendee Rank.</param>
-        /// <param name="cosmeticRankId">The Id of the Cosmetic Rank.</param>
+        /// <param name="stewardRoleId">The Id of the Steward (Event Moderator) Role. </param>
+        /// <param name="speakerRoleId">The Id of the Speaker Role.</param>
+        /// <param name="attendeeRoleId">The Id of the Attendee Role.</param>
+        /// <param name="cosmeticRoleId">The Id of the Cosmetic Role.</param>
         /// <param name="eventComplete">A bool representing the status.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task CreateNewEvent(Guid eventId, ulong guildId, ulong organiserId, string eventTitle, DateTime eventStart,
+        public async Task CreateNewEvent(Guid eventId, ulong guild, ulong Organiser, string title, DateTime eventStart,
             TimeSpan eventDuration, ulong categoryId, ulong textChannelId, ulong voiceChannelId, ulong controlPanelId,
-            ulong stewardRankId, ulong speakerRankId, ulong attendeeRankId, ulong cosmeticRankId, bool eventComplete)
+            ulong stewardRoleId, ulong speakerRoleId, ulong attendeeRoleId, ulong cosmeticRoleId, bool eventComplete)
         {
             using var context = _contextFactory.CreateDbContext();
             context.Add(new Event
             {
                 Id = eventId,
-                GuildId = guildId,
-                OrganiserId = organiserId,
-                EventTitle = eventTitle,
-                StartTime = eventStart,
+                Guild = guild,
+                Organiser = Organiser,
+                Title = title,
+                Start = eventStart,
                 Duration = eventDuration,
                 Category = categoryId,
                 TextChannel = textChannelId,
                 VoiceChannel = voiceChannelId,
                 ControlChannel = controlPanelId,
-                StewardRank = stewardRankId,
-                SpeakerRank = speakerRankId,
-                AttendeeRank = attendeeRankId,
-                CosmeticRank = cosmeticRankId,
+                StewardRole = stewardRoleId,
+                SpeakerRole = speakerRoleId,
+                AttendeeRole = attendeeRoleId,
+                CosmeticRole = cosmeticRoleId,
                 IsCompleted = eventComplete,
             });
 
@@ -139,9 +139,9 @@
         /// Update the organiser of the event.
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
-        /// <param name="organiserId">The new Id of the organiser.</param>
+        /// <param name="Organiser">The new Id of the organiser.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateEventOrganiser(Guid eventId, ulong organiserId)
+        public async Task UpdateEventOrganiser(Guid eventId, ulong Organiser)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -151,7 +151,7 @@
                 return;
             }
 
-            eventToUpdate.OrganiserId = organiserId;
+            eventToUpdate.Organiser = Organiser;
             await context.SaveChangesAsync();
         }
 
@@ -159,9 +159,9 @@
         /// Update the title of the event.
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
-        /// <param name="eventTitle">The title of the event.</param>
+        /// <param name="title">The title of the event.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateEventTitle(Guid eventId, string eventTitle)
+        public async Task UpdateTitle(Guid eventId, string title)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -171,7 +171,7 @@
                 return;
             }
 
-            eventToUpdate.EventTitle = eventTitle;
+            eventToUpdate.Title = title;
             await context.SaveChangesAsync();
         }
 
@@ -181,7 +181,7 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="eventStart">The start time of the event.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateEventStart(Guid eventId, DateTime eventStart)
+        public async Task UpdateStart(Guid eventId, DateTime eventStart)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -191,7 +191,7 @@
                 return;
             }
 
-            eventToUpdate.StartTime = eventStart;
+            eventToUpdate.Start = eventStart;
             await context.SaveChangesAsync();
         }
 
@@ -201,7 +201,7 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="eventDuration">The duration of the event.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateEventDuration(Guid eventId, TimeSpan eventDuration)
+        public async Task UpdateDuration(Guid eventId, TimeSpan eventDuration)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -296,12 +296,12 @@
         }
 
         /// <summary>
-        /// Update the Id of the Event Steward rank.
+        /// Update the Id of the Event Steward Role.
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
-        /// <param name="stewardRankId">The Id of the steward rank.</param>
+        /// <param name="stewardRoleId">The Id of the steward Role.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateStewardRankId(Guid eventId, ulong stewardRankId)
+        public async Task UpdateStewardRoleId(Guid eventId, ulong stewardRoleId)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -311,17 +311,17 @@
                 return;
             }
 
-            eventToUpdate.StewardRank = stewardRankId;
+            eventToUpdate.StewardRole = stewardRoleId;
             await context.SaveChangesAsync();
         }
 
         /// <summary>
-        /// Update the Id of the speaker rank.
+        /// Update the Id of the speaker Role.
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
-        /// <param name="speakerRankId">The Id of the Speaker Role.</param>
+        /// <param name="speakerRoleId">The Id of the Speaker Role.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateSpeakerRankId(Guid eventId, ulong speakerRankId)
+        public async Task UpdateSpeakerRoleId(Guid eventId, ulong speakerRoleId)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -331,7 +331,7 @@
                 return;
             }
 
-            eventToUpdate.SpeakerRank = speakerRankId;
+            eventToUpdate.SpeakerRole = speakerRoleId;
             await context.SaveChangesAsync();
         }
 
@@ -339,9 +339,9 @@
         /// Update Id of the Attendee Role.
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
-        /// <param name="attendeeRankId">The Id of the attendee Role.</param>
+        /// <param name="attendeeRoleId">The Id of the attendee Role.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateAttendeeRankId(Guid eventId, ulong attendeeRankId)
+        public async Task UpdateAttendeeRoleId(Guid eventId, ulong attendeeRoleId)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -351,17 +351,17 @@
                 return;
             }
 
-            eventToUpdate.AttendeeRank = attendeeRankId;
+            eventToUpdate.AttendeeRole = attendeeRoleId;
             await context.SaveChangesAsync();
         }
 
         /// <summary>
-        /// Update the Id of the Cosmetic rank of an event.
+        /// Update the Id of the Cosmetic Role of an event.
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
-        /// <param name="cosmeticRankId">The Id of the cosmetic rank.</param>
+        /// <param name="cosmeticRoleId">The Id of the cosmetic Role.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateCosmeticRankId(Guid eventId, ulong cosmeticRankId)
+        public async Task UpdateCosmeticRoleId(Guid eventId, ulong cosmeticRoleId)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -371,7 +371,7 @@
                 return;
             }
 
-            eventToUpdate.CosmeticRank = cosmeticRankId;
+            eventToUpdate.CosmeticRole = cosmeticRoleId;
             await context.SaveChangesAsync();
         }
 
