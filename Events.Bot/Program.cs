@@ -37,7 +37,7 @@ namespace Events.Bot
 
             services.AddSingleton(commandService);
 
-            services.AddSingleton<EventDbContext>();
+            services.AddSingleton<EventsDbContext>();
 
             var client = new DiscordSocketClient(new DiscordSocketConfig()
             {

@@ -12,15 +12,15 @@
     /// </summary>
     public class PermittedRoleDataAccessLayer : IPermittedRole
     {
-        private readonly EventDbContext _dbContext;
+        private readonly IDbContextFactory<EventsDbContext> _contextFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PermittedRoleDataAccessLayer"/> class.
         /// </summary>
-        /// <param name="dbContext">The <see cref="EventDbContext"/> to be injected.</param>
-        public PermittedRoleDataAccessLayer(EventDbContext dbContext)
+        /// <param name="contextFactory">The <see cref="IDbContextFactory{TContext}"/> to be injected.</param>
+        public PermittedRoleDataAccessLayer(IDbContextFactory<EventsDbContext> contextFactory)
         {
-            _dbContext = dbContext;
+            _contextFactory = contextFactory;
         }
 
         /// <summary>
@@ -31,7 +31,8 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task<PermittedRole> GetPermittedRole(ulong guildId, ulong permittedRole)
         {
-            return await _dbContext.PermittedRoles
+            using var context = _contextFactory.CreateDbContext();
+            return await context.PermittedRoles
                 .Where(x => x.GuildId == guildId && x.Id == permittedRole)
                 .FirstOrDefaultAsync();
         }
@@ -43,7 +44,8 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task<IEnumerable<PermittedRole>> GetPermittedRoles(ulong guildId)
         {
-            return await _dbContext.PermittedRoles
+            using var context = _contextFactory.CreateDbContext();
+            return await context.PermittedRoles
                 .ToListAsync();
         }
 
@@ -55,13 +57,15 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task CreatePermittedRole(ulong guildId, ulong permittedRoleId)
         {
-            _dbContext.Add(new PermittedRole
+            using var context = _contextFactory.CreateDbContext();
+
+            context.Add(new PermittedRole
             {
                 Id = permittedRoleId,
                 GuildId = guildId,
             });
 
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -73,6 +77,8 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task UpdatePermittedRole(ulong guildId, ulong permittedRoleId, ulong newPermittedRoleId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var roleToUpdate = await GetPermittedRole(guildId, permittedRoleId);
             if (roleToUpdate is null)
             {
@@ -80,7 +86,7 @@
             }
 
             roleToUpdate.Id = newPermittedRoleId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -91,14 +97,16 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task DeletePermittedRole(ulong guildId, ulong permittedRoleId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var roleToDelete = await GetPermittedRole(guildId, permittedRoleId);
             if (roleToDelete is null)
             {
                 return;
             }
 
-            _dbContext.Remove(permittedRoleId);
-            await _dbContext.SaveChangesAsync();
+            context.Remove(permittedRoleId);
+            await context.SaveChangesAsync();
         }
     }
 }

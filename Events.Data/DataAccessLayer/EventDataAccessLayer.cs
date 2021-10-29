@@ -13,15 +13,15 @@
     /// </summary>
     public class EventDataAccessLayer : IEventDataAccessLayer
     {
-        private readonly EventDbContext _dbContext;
+        private readonly IDbContextFactory<EventsDbContext> _contextFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EventDataAccessLayer"/> class.
         /// </summary>
-        /// <param name="dbContext">The <see cref="EventDbContext"/> to be injected.</param>
-        public EventDataAccessLayer(EventDbContext dbContext)
+        /// <param name="contextFactory">The <see cref="IDbContextFactory{TContext}"/> to be injected.</param>
+        public EventDataAccessLayer(IDbContextFactory<EventsDbContext> contextFactory)
         {
-            _dbContext = dbContext;
+            _contextFactory = contextFactory;
         }
 
         /// <summary>
@@ -30,7 +30,8 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task<IEnumerable<Event>> GetAllEvents()
         {
-            return await _dbContext.Events
+            using var context = _contextFactory.CreateDbContext();
+            return await context.Events
                 .ToListAsync();
         }
 
@@ -41,7 +42,8 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task<Event> GetEventByGuidAsync(Guid eventId)
         {
-            return await _dbContext.Events
+            using var context = _contextFactory.CreateDbContext();
+            return await context.Events
                 .Where(x => x.Id == eventId)
                 .FirstOrDefaultAsync();
         }
@@ -53,7 +55,8 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task<IEnumerable<Event>> GetAllEventsByGuildAsync(ulong guildId)
         {
-            return await _dbContext.Events
+            using var context = _contextFactory.CreateDbContext();
+            return await context.Events
                 .Where(x => x.GuildId == guildId)
                 .ToListAsync();
         }
@@ -66,7 +69,8 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task<IEnumerable<Event>> GetEventsByCompletionAsync(ulong guildId, bool completionStatus)
         {
-            return await _dbContext.Events
+            using var context = _contextFactory.CreateDbContext();
+            return await context.Events
                 .Where(x => x.GuildId == guildId && x.IsCompleted == completionStatus)
                 .ToListAsync();
         }
@@ -79,7 +83,8 @@
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
         public async Task<Event> GetEventByTitle(ulong guildId, string title)
         {
-            return await _dbContext.Events
+            using var context = _contextFactory.CreateDbContext();
+            return await context.Events
                 .Where(x => x.GuildId == guildId && x.EventTitle == title)
                 .FirstOrDefaultAsync();
         }
@@ -107,7 +112,8 @@
             TimeSpan eventDuration, ulong categoryId, ulong textChannelId, ulong voiceChannelId, ulong controlPanelId,
             ulong stewardRankId, ulong speakerRankId, ulong attendeeRankId, ulong cosmeticRankId, bool eventComplete)
         {
-            _dbContext.Add(new Event
+            using var context = _contextFactory.CreateDbContext();
+            context.Add(new Event
             {
                 Id = eventId,
                 GuildId = guildId,
@@ -126,7 +132,7 @@
                 IsCompleted = eventComplete,
             });
 
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -137,6 +143,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateEventOrganiser(Guid eventId, ulong organiserId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -144,7 +152,7 @@
             }
 
             eventToUpdate.OrganiserId = organiserId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -155,6 +163,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateEventTitle(Guid eventId, string eventTitle)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -162,7 +172,7 @@
             }
 
             eventToUpdate.EventTitle = eventTitle;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -173,6 +183,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateEventStart(Guid eventId, DateTime eventStart)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -180,7 +192,7 @@
             }
 
             eventToUpdate.StartTime = eventStart;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -191,6 +203,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateEventDuration(Guid eventId, TimeSpan eventDuration)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -198,7 +212,7 @@
             }
 
             eventToUpdate.Duration = eventDuration;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -209,6 +223,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateCategoryId(Guid eventId, ulong categoryId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -216,7 +232,7 @@
             }
 
             eventToUpdate.Category = categoryId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -227,6 +243,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateTextChannelId(Guid eventId, ulong textChannelId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -234,7 +252,7 @@
             }
 
             eventToUpdate.TextChannel = textChannelId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -245,6 +263,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateVoiceChannelId(Guid eventId, ulong voiceChannelId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -252,7 +272,7 @@
             }
 
             eventToUpdate.VoiceChannel = voiceChannelId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -263,6 +283,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateControlPanelId(Guid eventId, ulong controlPanelId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -270,7 +292,7 @@
             }
 
             eventToUpdate.ControlChannel = controlPanelId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -281,6 +303,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateStewardRankId(Guid eventId, ulong stewardRankId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -288,7 +312,7 @@
             }
 
             eventToUpdate.StewardRank = stewardRankId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -299,6 +323,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateSpeakerRankId(Guid eventId, ulong speakerRankId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -306,7 +332,7 @@
             }
 
             eventToUpdate.SpeakerRank = speakerRankId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -317,6 +343,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateAttendeeRankId(Guid eventId, ulong attendeeRankId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -324,7 +352,7 @@
             }
 
             eventToUpdate.AttendeeRank = attendeeRankId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -335,6 +363,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateCosmeticRankId(Guid eventId, ulong cosmeticRankId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -342,7 +372,7 @@
             }
 
             eventToUpdate.CosmeticRank = cosmeticRankId;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -353,6 +383,8 @@
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public async Task UpdateEventCompletionStatus(Guid eventId, bool eventComplete)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToUpdate = await GetEventByGuidAsync(eventId);
             if (eventToUpdate is null)
             {
@@ -360,7 +392,7 @@
             }
 
             eventToUpdate.IsCompleted = eventComplete;
-            await _dbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -370,14 +402,16 @@
         /// <returns>Nothing... Poof... its all gone! I Promise...</returns>
         public async Task DeleteEvent(Guid eventId)
         {
+            using var context = _contextFactory.CreateDbContext();
+
             var eventToDelete = await GetEventByGuidAsync(eventId);
             if (eventToDelete is null)
             {
                 return;
             }
 
-            _dbContext.Remove(eventId);
-            await _dbContext.SaveChangesAsync();
+            context.Remove(eventId);
+            await context.SaveChangesAsync();
         }
     }
 }

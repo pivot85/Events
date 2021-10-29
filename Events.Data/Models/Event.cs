@@ -15,22 +15,22 @@
         /// <summary>
         /// Gets or Sets the Id of the guild the event is running in.
         /// </summary>
-        public ulong GuildId { get; set; }
+        public ulong Guild { get; set; }
 
         /// <summary>
         /// Gets or Sets the Id of the Organiser of the event.
         /// </summary>
-        public ulong OrganiserId { get; set; }
+        public ulong Organiser { get; set; }
 
         /// <summary>
         /// Gets or Sets the title of the event.
         /// </summary>
-        public string EventTitle { get; set; }
+        public string Title { get; set; }
 
         /// <summary>
         /// Gets or Sets the StartTime for the event.
         /// </summary>
-        public DateTime StartTime { get; set; }
+        public DateTime Start { get; set; }
 
         /// <summary>
         /// Gets or Sets the duration of the event.
@@ -58,27 +58,27 @@
         public ulong ControlChannel { get; set; }
 
         /// <summary>
-        /// Gets or Sets the Steward (Mod) Rank for the event.
+        /// Gets or Sets the Steward (Mod) Role for the event.
         /// </summary>
-        public ulong StewardRank { get; set; }
+        public ulong StewardRole { get; set; }
 
         /// <summary>
-        /// Gets or Sets the Speaker Rank for the event.
+        /// Gets or Sets the Speaker Role for the event.
         /// </summary>
-        public ulong SpeakerRank { get; set; }
+        public ulong SpeakerRole { get; set; }
 
         /// <summary>
-        /// Gets or Sets the Attendee Rank for the event.
+        /// Gets or Sets the Attendee Role for the event.
         /// </summary>
-        public ulong AttendeeRank { get; set; }
+        public ulong AttendeeRole { get; set; }
 
         /// <summary>
-        /// Gets or Sets the Cosmetic Rank for the event.
+        /// Gets or Sets the Cosmetic Role for the event.
         /// </summary>
-        public ulong CosmeticRank { get; set; }
+        public ulong CosmeticRole { get; set; }
 
         /// <summary>
-        /// Gets or Sets the status of if the event is completed or not.
+        /// Gets or sets a value indicating whether the status of if the event is completed or not.
         /// </summary>
         public bool IsCompleted { get; set; }
     }

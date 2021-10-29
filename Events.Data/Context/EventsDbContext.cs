@@ -6,13 +6,13 @@
     /// <summary>
     /// Implementation of <see cref="DbContext"/> for our Events.
     /// </summary>
-    public class EventDbContext : DbContext
+    public class EventsDbContext : DbContext
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="EventDbContext"/> class.
+        /// Initializes a new instance of the <see cref="EventsDbContext"/> class.
         /// </summary>
         /// <param name="options">The <see cref="DbContextOptions"/> to be injected.</param>
-        public EventDbContext(DbContextOptions options)
+        public EventsDbContext(DbContextOptions options)
             : base(options)
         {
         }
