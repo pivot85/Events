@@ -94,7 +94,7 @@
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="guild">The Id of the guild that the event is run.</param>
-        /// <param name="Organiser">The Id of the organiser of the event.</param>
+        /// <param name="organiser">The Id of the organiser of the event.</param>
         /// <param name="title">The title of the event.</param>
         /// <param name="eventStart">The start-time of the event.</param>
         /// <param name="eventDuration">The duration of the event.</param>
@@ -108,16 +108,29 @@
         /// <param name="cosmeticRoleId">The Id of the Cosmetic Role.</param>
         /// <param name="eventComplete">A bool representing the status.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task Create(Guid eventId, ulong guild, ulong Organiser, string title, DateTime eventStart,
-            TimeSpan eventDuration, ulong categoryId, ulong textChannelId, ulong voiceChannelId, ulong controlPanelId,
-            ulong stewardRoleId, ulong speakerRoleId, ulong attendeeRoleId, ulong cosmeticRoleId, bool eventComplete)
+        public async Task Create(
+            Guid eventId,
+            ulong guild,
+            ulong organiser,
+            string title,
+            DateTime eventStart,
+            TimeSpan eventDuration,
+            ulong categoryId,
+            ulong textChannelId,
+            ulong voiceChannelId,
+            ulong controlPanelId,
+            ulong stewardRoleId,
+            ulong speakerRoleId,
+            ulong attendeeRoleId,
+            ulong cosmeticRoleId,
+            bool eventComplete)
         {
             using var context = _contextFactory.CreateDbContext();
             context.Add(new Event
             {
                 Id = eventId,
                 Guild = guild,
-                Organiser = Organiser,
+                Organiser = organiser,
                 Title = title,
                 Start = eventStart,
                 Duration = eventDuration,
@@ -139,9 +152,9 @@
         /// Update the organiser of the event.
         /// </summary>
         /// <param name="eventId">The Id of the event.</param>
-        /// <param name="Organiser">The new Id of the organiser.</param>
+        /// <param name="organiser">The new Id of the organiser.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateOrganiser(Guid eventId, ulong Organiser)
+        public async Task UpdateOrganiser(Guid eventId, ulong organiser)
         {
             using var context = _contextFactory.CreateDbContext();
 
@@ -151,7 +164,7 @@
                 return;
             }
 
-            eventToUpdate.Organiser = Organiser;
+            eventToUpdate.Organiser = organiser;
             await context.SaveChangesAsync();
         }
 

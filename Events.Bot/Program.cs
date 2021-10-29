@@ -71,6 +71,10 @@ namespace Events.Bot
                                 ))
                     .AddSingleton<EventsDataAccessLayer>()
                     .AddSingleton<InteractivityService>()
+                    .AddSingleton(x => new InteractivityConfig
+                    { 
+                        DefaultTimeout = TimeSpan.FromMinutes(5)
+                    })
                     .AddSingleton<PermittedRolesDataAccessLayer>()
                     .AddHostedService<CommandHandler>()
                     .AddHostedService<ApplicationCommandCoordinator>();
