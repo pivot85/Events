@@ -8,17 +8,17 @@ using System.Threading.Tasks;
 
 namespace Events.Bot.Modules
 {
-    public class PingModule : DualModuleBase
+    public class EventModule : DualModuleBase
     {
-        public PingModule(EventsDataAccessLayer eventsDataAccessLayer, PermittedRoleDataAccessLayer permittedRoleDataAccessLayer)
+        public EventModule(EventsDataAccessLayer eventsDataAccessLayer, PermittedRoleDataAccessLayer permittedRoleDataAccessLayer)
             : base(eventsDataAccessLayer, permittedRoleDataAccessLayer)
         {
         }
 
-        [Command("ping")]
-        public async Task PingAsync()
+        [Command("newevent")]
+        public async Task NewEventAsync()
         {
-            await ReplyAsync($"Pong! {Context.Client.Latency}");
+            await ReplyAsync("This works!");
         }
     }
 }

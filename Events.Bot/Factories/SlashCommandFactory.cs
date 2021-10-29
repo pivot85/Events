@@ -20,7 +20,11 @@ namespace Events.Bot.Factories
                 .WithName("pong")
                 .WithDescription("poggers");
 
-            return new ApplicationCommandProperties[] { pingCommand.Build(), pongCommand.Build() };
+            var newEventCommand = new SlashCommandBuilder()
+                .WithName("newevent")
+                .WithDescription("Create a new event interactively!");
+
+            return new ApplicationCommandProperties[] { pingCommand.Build(), pongCommand.Build(), newEventCommand.Build() };
         }
     }
 }

@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Discord.Rest;
 using Discord.WebSocket;
+using Events.Data.DataAccessLayer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +22,14 @@ namespace Events.Bot
         ///     Gets the context for the command.
         /// </summary>
         public DualCommandContext Context { get; private set; }
+        public readonly EventsDataAccessLayer EventsDataAccessLayer;
+        public readonly PermittedRoleDataAccessLayer PermittedRoleDataAccessLayer;
+
+        public DualModuleBase(EventsDataAccessLayer eventsDataAccessLayer, PermittedRoleDataAccessLayer permittedRoleDataAccessLayer)
+        {
+            EventsDataAccessLayer = eventsDataAccessLayer;
+            PermittedRoleDataAccessLayer = permittedRoleDataAccessLayer;
+        }
 
         public void SetContext(ICommandContext context)
         {
