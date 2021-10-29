@@ -10,7 +10,7 @@ namespace Events.Bot.Modules
     public class PingModule : DualModuleBase
     {
         [Command("ping")]
-        public async Task PingCommand()
+        public async Task PingAsync()
         {
             await ReplyAsync($"Pong! {Context.Client.Latency}");
         }

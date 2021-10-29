@@ -2,6 +2,7 @@
 using Discord.Commands;
 using Discord.Commands.Builders;
 using Discord.WebSocket;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -54,7 +55,6 @@ namespace Events.Bot
         private static readonly TypeInfo _moduleTypeInfo = typeof(DualModuleBase).GetTypeInfo();
         private readonly SemaphoreSlim _moduleLock;
         private CommandServiceConfig _config;
-        private Logger _log;
 
         /// <summary>
         ///     Creates a new instance of the command service
@@ -70,7 +70,6 @@ namespace Events.Bot
         /// <param name="conf">The config for the command service</param>
         public DualCommandService(CommandServiceConfig conf)
         {
-            _log = Logger.GetLogger<DualCommandService>();
             conf.IgnoreExtraArgs = true;
             _moduleLock = new SemaphoreSlim(1, 1);
             _underlyingService = new CommandService(conf);
@@ -248,7 +247,7 @@ namespace Events.Bot
                 result.TryAdd(typeInfo.AsType(), module);
             }
 
-            _log.Debug($"Successfully built {result.Count} modules.", Severity.CommandService);
+            Serilog.Log.Debug($"Successfully built {result.Count} modules.");
 
             return result;
         }
@@ -275,7 +274,7 @@ namespace Events.Bot
                 }
                 else if (IsLoadableModule(typeInfo))
                 {
-                    _log.Warn($"Class {typeInfo.FullName} is not public and cannot be loaded. To suppress this message, mark the class with {nameof(DontAutoLoadAttribute)}.");
+                    Serilog.Log.Warning($"Class {typeInfo.FullName} is not public and cannot be loaded. To suppress this message, mark the class with {nameof(DontAutoLoadAttribute)}.");
                 }
             }
 

@@ -1,12 +1,16 @@
 ﻿using Discord;
+using Discord.Addons.Hosting;
 using Discord.Rest;
 using Discord.WebSocket;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Events.Bot
@@ -14,12 +18,11 @@ namespace Events.Bot
     /// <summary>
     ///     Represents a service used to coordinate application command creation.
     /// </summary>
-    public class ApplicationCommandCoordinator
+    public class ApplicationCommandCoordinator : DiscordClientService
     {
         private readonly DiscordSocketClient client;
         private List<CommandRegisterInfo> _commands;
         private List<ApplicationCommandFactory> _readyQueue;
-        private Logger _log;
         private readonly TaskCompletionSource registrarSource;
         private object _lock = new object();
         private bool _hasInit = false;
@@ -28,16 +31,15 @@ namespace Events.Bot
         ///     Creates a new instance for the application command coordinatior
         /// </summary>
         /// <param name="client">A client which to execute command creation on.</param>
-        public ApplicationCommandCoordinator(DiscordSocketClient client)
+        public ApplicationCommandCoordinator(DiscordSocketClient client, ILogger<DiscordClientService> logger)
+            : base (client, logger)
         {
             this.client = client;
-            _log = Logger.GetLogger<ApplicationCommandCoordinator>();
             client.Ready += InitializeCommandsAsync;
             registrarSource = new TaskCompletionSource();
-            PreregisterCommands();
         }
 
-        private void PreregisterCommands()
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             List<CommandRegisterInfo> commands = new();
             List<ApplicationCommandFactory> readyQueue = new();
@@ -81,6 +83,7 @@ namespace Events.Bot
             this._readyQueue = readyQueue;
 
             registrarSource.SetResult();
+            return Task.CompletedTask;
         }
 
         private void EmptyReadyQueue()
@@ -105,12 +108,12 @@ namespace Events.Bot
             }
         }
 
-        private async Task InitializeCommandsAsync()
+        private Task InitializeCommandsAsync()
         {
             lock (_lock)
             {
                 if (_hasInit)
-                    return;
+                    return Task.CompletedTask;
 
                 _hasInit = true;
             }
@@ -196,9 +199,10 @@ namespace Events.Bot
                 }
                 catch (Exception x)
                 {
-                    _log.Critical("Failed to initialize commands!", Severity.Core, x);
+                    Log.Error($"Failed to initialize commands! {x}");
                 }
             });
+            return Task.CompletedTask;
         }
 
         private class CommandRegisterInfo
