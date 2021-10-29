@@ -354,3 +354,4 @@ MigrationBackup/
 
 # Ignore configuration files due to sample
 Events.Bot/appsettings.json
+Events.Data/appsettings.json
