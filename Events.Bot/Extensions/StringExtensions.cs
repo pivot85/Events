@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Events.Bot.Utils
+namespace Events.Bot.Extensions
 {
     public static class StringExtensions
     {

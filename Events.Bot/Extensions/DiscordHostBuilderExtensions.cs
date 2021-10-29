@@ -14,6 +14,7 @@
 #endregion
 using Discord;
 using Discord.Commands;
+using Events.Bot.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -22,7 +23,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Events.Bot.Utils
+namespace Events.Bot.Extensions
 {
     public static class DiscordHostBuilderExtensions
     {

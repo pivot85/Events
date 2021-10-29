@@ -5,6 +5,8 @@ using Discord.WebSocket;
 using Events.Bot.Utils;
 using Events.Data.DataAccessLayer;
 using Interactivity;
+using Microsoft.Extensions.Configuration;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,15 +16,15 @@ namespace Events.Bot.Modules
 {
     public class EventModule : DualModuleBase
     {
-        public EventModule(EventsDataAccessLayer eventsDataAccessLayer, PermittedRolesDataAccessLayer permittedRoleDataAccessLayer, InteractivityService interactivityService)
-            : base(eventsDataAccessLayer, permittedRoleDataAccessLayer, interactivityService)
+        public EventModule(EventsDataAccessLayer eventsDataAccessLayer, PermittedRolesDataAccessLayer permittedRoleDataAccessLayer, InteractivityService interactivityService, IConfiguration configuration)
+            : base(eventsDataAccessLayer, permittedRoleDataAccessLayer, interactivityService, configuration)
         {
         }
 
         private readonly int TITLE_CHAR_LIMIT = 128;
         private readonly int DESC_CHAR_LIMIT = 1536;
 
-        [Command("newevent")]
+        [Command("new")]
         public async Task NewEventAsync()
         {
             var permittedRoles = await PermittedRoleDataAccessLayer.GetAllByGuild(Context.Guild.Id);
@@ -36,7 +38,7 @@ namespace Events.Bot.Modules
             string title = string.Empty;
             while (true)
             {
-                var response = await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id);
+                var response = await NextMessageAsync();
                 if (response.IsTimeouted || response.Value == null)
                 {
                     await Context.Channel.SendMessageAsync("You didn't respond in time, please run the command again.");
@@ -65,7 +67,7 @@ namespace Events.Bot.Modules
             string description = string.Empty;
             while (true)
             {
-                var response = await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id);
+                var response = await NextMessageAsync();
                 if (response.IsTimeouted || response.Value == null)
                 {
                     await Context.Channel.SendMessageAsync("You didn't respond in time, please run the command again.");
@@ -94,7 +96,7 @@ namespace Events.Bot.Modules
             DateTime start;
             while (true)
             {
-                var response = await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id);
+                var response = await NextMessageAsync();
                 if (response.IsTimeouted || response.Value == null)
                 {
                     await Context.Channel.SendMessageAsync("You didn't respond in time, please run the command again.");
@@ -121,7 +123,7 @@ namespace Events.Bot.Modules
             TimeSpan duration;
             while (true)
             {
-                var response = await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id);
+                var response = await NextMessageAsync();
                 if (response.IsTimeouted || response.Value == null)
                 {
                     await Context.Channel.SendMessageAsync("You didn't respond in time, please run the command again.");
@@ -141,18 +143,26 @@ namespace Events.Bot.Modules
                     await Context.Channel.SendMessageAsync($"Please provide a properly formatted duration for the event.");
                     continue;
                 }
+
+                if (duration.TotalMinutes < 10)
+                {
+                    await Context.Channel.SendMessageAsync($"Please provide a duration that is longer than at least 10 minutes.");
+                    continue;
+                }
+
                 break;
             }
 
             var eventId = Guid.NewGuid();
             var eventIdSubstring = eventId.ToString().Substring(0, 7);
 
-            await Context.Channel.SendMessageAsync($"The event will last for {(duration.TotalHours > 1 ? $"{duration.Hours} hour(s) and {duration.Minutes} minute(s)" : $"{duration.Minutes} minutes")}. Do you want to add any stewards? Please mention them or respond with \"skip\".");
+            await Context.Channel.SendMessageAsync($"The event will last for {(duration.TotalHours >= 1 ? $"{duration.Hours} hour(s) and {duration.Minutes} minute(s)" : $"{duration.Minutes} minute(s)")}. Do you want to add any stewards? Please mention them or respond with \"skip\".");
             ulong stewardRoleId = 0;
             RestRole stewardRole = null;
+            var stewards = new List<SocketGuildUser>();
             while (true)
             {
-                var response = await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id);
+                var response = await NextMessageAsync();
                 if (response.IsTimeouted || response.Value == null)
                 {
                     await Context.Channel.SendMessageAsync("You didn't respond in time, cancelled the setup.");
@@ -172,19 +182,18 @@ namespace Events.Bot.Modules
 
                 if (content.ToLower() == "skip")
                     break;
-
-                var users = new List<SocketGuildUser>();
+                
                 foreach (var mention in content.Split(" "))
                 {
                     if (!MentionUtils.TryParseUser(mention, out ulong userId))
                         continue;
 
                     var user = Context.Guild.GetUser(userId);
-                    if (user == null || users.Contains(user))
+                    if (user == null || stewards.Contains(user))
                         continue;
 
                     await user.AddRoleAsync(stewardRole);
-                    users.Add(user);
+                    stewards.Add(user);
                 }
 
                 break;
@@ -193,9 +202,10 @@ namespace Events.Bot.Modules
             await Context.Channel.SendMessageAsync($"Stewards have been set! Do you want to add any speakers? Please mention them or respond with \"skip\".");
             ulong speakerRoleId = 0;
             RestRole speakerRole = null;
+            var speakers = new List<SocketGuildUser>();
             while (true)
             {
-                var response = await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id);
+                var response = await NextMessageAsync();
                 if (response.IsTimeouted || response.Value == null)
                 {
                     await Context.Channel.SendMessageAsync("You didn't respond in time, cancelled the setup.");
@@ -216,19 +226,18 @@ namespace Events.Bot.Modules
 
                 if (content.ToLower() == "skip")
                     break;
-
-                var users = new List<SocketGuildUser>();
+                
                 foreach (var mention in content.Split(" "))
                 {
                     if (!MentionUtils.TryParseUser(mention, out ulong userId))
                         continue;
 
                     var user = Context.Guild.GetUser(userId);
-                    if (user == null || users.Contains(user))
+                    if (user == null || speakers.Contains(user))
                         continue;
 
                     await user.AddRoleAsync(speakerRole);
-                    users.Add(user);
+                    speakers.Add(user);
                 }
 
                 break;
@@ -240,7 +249,7 @@ namespace Events.Bot.Modules
                 await Context.Channel.SendMessageAsync($"Is there a role you'd like to use as a cosmetic role? Please mention it or respond with \"skip\".");
                 while (true)
                 {
-                    var response = await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id);
+                    var response = await NextMessageAsync();
                     if (response.IsTimeouted || response.Value == null)
                     {
                         await Context.Channel.SendMessageAsync("You didn't respond in time, cancelled the setup.");
@@ -279,14 +288,47 @@ namespace Events.Bot.Modules
             }
 
             var message = await Context.Channel.SendMessageAsync("All set! Time to create the event...");
-            var attendeeRole = await Context.Guild.CreateRoleAsync(eventIdSubstring + " Attendee", isHoisted: false, isMentionable: false);
+            try
+            {
+                var attendeeRole = await Context.Guild.CreateRoleAsync(eventIdSubstring + " Attendee", isHoisted: false, isMentionable: false);
 
-            var category = await Context.Guild.CreateCategoryChannelAsync("Event " + eventIdSubstring);
-            var textChannel = await Context.Guild.CreateTextChannelAsync(eventIdSubstring + "-general", x => x.CategoryId = category.Id);
-            var voiceChannel = await Context.Guild.CreateVoiceChannelAsync("Event " + eventIdSubstring, x => x.CategoryId = category.Id);
-            var controlChannel = await Context.Guild.CreateTextChannelAsync(eventIdSubstring + "-control", x => x.CategoryId = category.Id);
+                var category = await Context.Guild.CreateCategoryChannelAsync("Event " + eventIdSubstring);
+                var textChannel = await Context.Guild.CreateTextChannelAsync(eventIdSubstring + "-general", x => x.CategoryId = category.Id);
+                var voiceChannel = await Context.Guild.CreateVoiceChannelAsync("Event " + eventIdSubstring, x => x.CategoryId = category.Id);
+                var controlChannel = await Context.Guild.CreateTextChannelAsync(eventIdSubstring + "-control", x => x.CategoryId = category.Id);
 
-            await EventsDataAccessLayer.Create(eventId, Context.Guild.Id, Context.User.Id, title, start, duration, category.Id, textChannel.Id, voiceChannel.Id, controlChannel.Id, stewardRoleId, speakerRoleId, attendeeRole.Id, cosmeticRoleId, false);
+                await EventsDataAccessLayer.Create(eventId, Context.Guild.Id, Context.User.Id, title, start, duration, category.Id, textChannel.Id, voiceChannel.Id, controlChannel.Id, stewardRoleId, speakerRoleId, attendeeRole.Id, cosmeticRoleId, false);
+
+                var eventsChannel = Context.Guild.GetTextChannel(Configuration.GetValue<ulong>("Events"));
+
+                var eventPanelBuilder = new EmbedBuilder()
+                    .WithAuthor(x =>
+                    {
+                        x
+                        .WithIconUrl(Icons.Ticket)
+                        .WithName(title);
+                    })
+                    .WithDescription(description)
+                    .WithColor(Colours.Primary)
+                    .AddField("Start", string.Format("{0:f}", start), true)
+                    .AddField("Duration", duration.TotalHours >= 1 ? $"{duration.Hours} hour(s) and {duration.Minutes} minute(s)" : $"{duration.Minutes} minute(s)", true)
+                    .AddField("Organiser", Context.User.Mention, true)
+                    .WithFooter($"{eventIdSubstring} · {eventId}");
+
+                if (speakers.Count() > 0)
+                    eventPanelBuilder.AddField($"Speakers ({speakers.Count()})", string.Join(" ", speakers.Select(x => x.Mention)));
+
+                var eventPannelButtonsBuilder = new ComponentBuilder()
+                    .WithButton("Sign up", "sign_up", ButtonStyle.Success);
+
+                await eventsChannel.SendMessageAsync(embed: eventPanelBuilder.Build(), component: eventPannelButtonsBuilder.Build());
+            }
+            catch (Exception ex)
+            {
+                await message.ModifyAsync(x => x.Content = "Whoops! It seems like something went wrong. Please try again later.");
+                Log.Warning(ex.ToString());
+                return;
+            }
 
             await message.ModifyAsync(x => x.Content = $"Done! All roles and channels have been created for the event.");
         }

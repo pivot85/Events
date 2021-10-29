@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using Events.Data.DataAccessLayer;
 using Interactivity;
+using Events.Bot.Extensions;
 
 namespace Events.Bot
 {

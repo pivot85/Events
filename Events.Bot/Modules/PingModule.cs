@@ -1,6 +1,7 @@
 ﻿using Discord.Commands;
 using Events.Data.DataAccessLayer;
 using Interactivity;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,8 @@ namespace Events.Bot.Modules
 {
     public class PingModule : DualModuleBase
     {
-        public PingModule(EventsDataAccessLayer eventsDataAccessLayer, PermittedRolesDataAccessLayer permittedRoleDataAccessLayer, InteractivityService interactivityService)
-            : base(eventsDataAccessLayer, permittedRoleDataAccessLayer, interactivityService)
+        public PingModule(EventsDataAccessLayer eventsDataAccessLayer, PermittedRolesDataAccessLayer permittedRoleDataAccessLayer, InteractivityService interactivityService, IConfiguration configuration)
+            : base(eventsDataAccessLayer, permittedRoleDataAccessLayer, interactivityService, configuration)
         {
         }
 

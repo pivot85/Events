@@ -21,7 +21,7 @@ namespace Events.Bot.Factories
                 .WithDescription("poggers");
 
             var newEventCommand = new SlashCommandBuilder()
-                .WithName("newevent")
+                .WithName("new")
                 .WithDescription("Create a new event interactively!");
 
             return new ApplicationCommandProperties[] { pingCommand.Build(), pongCommand.Build(), newEventCommand.Build() };

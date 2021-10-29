@@ -4,6 +4,7 @@ using Discord.Rest;
 using Discord.WebSocket;
 using Events.Data.DataAccessLayer;
 using Interactivity;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,12 +27,14 @@ namespace Events.Bot
         public InteractivityService Interactivity { get; set; }
         public readonly EventsDataAccessLayer EventsDataAccessLayer;
         public readonly PermittedRolesDataAccessLayer PermittedRoleDataAccessLayer;
+        public readonly IConfiguration Configuration;
 
-        public DualModuleBase(EventsDataAccessLayer eventsDataAccessLayer, PermittedRolesDataAccessLayer permittedRoleDataAccessLayer, InteractivityService interactivityService)
+        public DualModuleBase(EventsDataAccessLayer eventsDataAccessLayer, PermittedRolesDataAccessLayer permittedRoleDataAccessLayer, InteractivityService interactivityService, IConfiguration configuration)
         {
             EventsDataAccessLayer = eventsDataAccessLayer;
             PermittedRoleDataAccessLayer = permittedRoleDataAccessLayer;
             Interactivity = interactivityService;
+            Configuration = configuration;
         }
 
         public void SetContext(ICommandContext context)
@@ -207,6 +210,11 @@ namespace Events.Bot
                 return true;
 
             return false;
+        }
+
+        public async Task<InteractivityResult<SocketMessage>> NextMessageAsync()
+        {
+            return await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id && x.Channel.Id == Context.Channel.Id);
         }
     }
 }
