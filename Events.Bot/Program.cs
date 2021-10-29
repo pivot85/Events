@@ -65,10 +65,11 @@ namespace Events.Bot
                     .AddDbContextFactory<EventsDbContext>(options =>
                             options
                             .UseMySql(
-                                context.Configuration.GetValue<string>("Database"),
+                                context.Configuration.GetConnectionString("Default"),
                                 new MySqlServerVersion(new Version(8, 0, 26))
                                 ))
-                        .AddSingleton<EventsDataAccessLayer>()
+                    .AddSingleton<EventsDataAccessLayer>()
+                    .AddSingleton<PermittedRoleDataAccessLayer>()
                     .AddHostedService<CommandHandler>()
                     .AddHostedService<ApplicationCommandCoordinator>();
                 });
