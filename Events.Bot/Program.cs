@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Events.Data.DataAccessLayer;
+using Interactivity;
 
 namespace Events.Bot
 {
@@ -69,7 +70,8 @@ namespace Events.Bot
                                 new MySqlServerVersion(new Version(8, 0, 26))
                                 ))
                     .AddSingleton<EventsDataAccessLayer>()
-                    .AddSingleton<PermittedRoleDataAccessLayer>()
+                    .AddSingleton<InteractivityService>()
+                    .AddSingleton<PermittedRolesDataAccessLayer>()
                     .AddHostedService<CommandHandler>()
                     .AddHostedService<ApplicationCommandCoordinator>();
                 });

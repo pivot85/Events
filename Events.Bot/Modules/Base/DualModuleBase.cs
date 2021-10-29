@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.Rest;
 using Discord.WebSocket;
 using Events.Data.DataAccessLayer;
+using Interactivity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,19 +23,22 @@ namespace Events.Bot
         ///     Gets the context for the command.
         /// </summary>
         public DualCommandContext Context { get; private set; }
+        public InteractivityService Interactivity { get; set; }
         public readonly EventsDataAccessLayer EventsDataAccessLayer;
-        public readonly PermittedRoleDataAccessLayer PermittedRoleDataAccessLayer;
+        public readonly PermittedRolesDataAccessLayer PermittedRoleDataAccessLayer;
 
-        public DualModuleBase(EventsDataAccessLayer eventsDataAccessLayer, PermittedRoleDataAccessLayer permittedRoleDataAccessLayer)
+        public DualModuleBase(EventsDataAccessLayer eventsDataAccessLayer, PermittedRolesDataAccessLayer permittedRoleDataAccessLayer, InteractivityService interactivityService)
         {
             EventsDataAccessLayer = eventsDataAccessLayer;
             PermittedRoleDataAccessLayer = permittedRoleDataAccessLayer;
+            Interactivity = interactivityService;
         }
 
         public void SetContext(ICommandContext context)
         {
             this.Context = (DualCommandContext)context;
         }
+
         public virtual async Task BeforeExecuteAsync() { }
 
         /// <summary>
@@ -187,5 +191,22 @@ namespace Events.Bot
         {
             {(typeof(long), typeof(int)), (v) => { return Convert.ToInt32(v); } },
         };
+
+        public async Task<bool> UserIsPermitted()
+        {
+            var user = Context.User as SocketGuildUser;
+
+            if (user.GuildPermissions.Administrator)
+                return true;
+
+            var permittedRoles = await PermittedRoleDataAccessLayer.GetAllByGuild(Context.Guild.Id);
+            if (permittedRoles.Count() == 0)
+                return false;
+
+            if (user.Roles.Select(x => x.Id).Intersect(permittedRoles.Select(x => x.Id)).Any())
+                return true;
+
+            return false;
+        }
     }
 }
