@@ -28,4 +28,8 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Events.Data\Events.Data.csproj" />
+  </ItemGroup>
+
 </Project>
