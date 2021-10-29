@@ -1,14 +1,17 @@
-﻿using System;
-using System.IO;
-using System.Security.Cryptography.X509Certificates;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.Configuration;
-
-namespace Events.Data.Context
+﻿namespace Events.Data.Context
 {
+    using System;
+    using System.IO;
+    using Microsoft.EntityFrameworkCore;
+    using Microsoft.EntityFrameworkCore.Design;
+    using Microsoft.Extensions.Configuration;
+
+    /// <summary>
+    /// The <see cref="IDesignTimeDbContextFactory{TContext}"/> for <see cref="EventDbContext"/>
+    /// </summary>
     public class EventDbContextFactory : IDesignTimeDbContextFactory<EventDbContext>
     {
+        /// <inheritdoc/>
         public EventDbContext CreateDbContext(string[] args)
         {
             var configuration = new ConfigurationBuilder()
