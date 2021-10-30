@@ -24,7 +24,11 @@ namespace Events.Bot.Factories
                 .WithName("new")
                 .WithDescription("Create a new event interactively!");
 
-            return new ApplicationCommandProperties[] { pingCommand.Build(), pongCommand.Build(), newEventCommand.Build() };
+            var clearCommand = new SlashCommandBuilder()
+                .WithName("clear")
+                .WithDescription("Clean-up all event related entities (temporary).");
+
+            return new ApplicationCommandProperties[] { pingCommand.Build(), pongCommand.Build(), newEventCommand.Build(), clearCommand.Build() };
         }
     }
 }

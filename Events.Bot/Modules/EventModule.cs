@@ -23,6 +23,36 @@ namespace Events.Bot.Modules
 
         private readonly int TITLE_CHAR_LIMIT = 128;
         private readonly int DESC_CHAR_LIMIT = 1536;
+        private readonly int REQUIRED_AVAILABLE_ROLES_COUNT = 3;
+        private readonly int REQUIRED_AVAILABLE_CHANNELS_COUNT = 3;
+        private readonly int GUILD_ROLES_CAP = 250;
+        private readonly int GUILD_CHANNELS_CAP = 500;
+
+        // Temporary clean-up command for testing purposes
+        [Command("clear")]
+        public async Task ClearAsync()
+        {
+            var message = await ReplyAsync("Initiating clean-up...");
+
+            var categories = Context.Guild.CategoryChannels.Where(x => x.Name.Contains("Event"));
+            foreach (var category in categories)
+            {
+                foreach (var channel in category.Channels)
+                {
+                    await channel.DeleteAsync();
+                }
+
+                await category.DeleteAsync();
+            }
+
+            var roles = Context.Guild.Roles.Where(x => x.Name.Contains("Attendee") || x.Name.Contains("Speaker") || x.Name.Contains("Steward"));
+            foreach (var role in roles)
+            {
+                await role.DeleteAsync();
+            }
+
+            await Context.Channel.SendMessageAsync("Clean-up finished!");
+        }
 
         [Command("new")]
         public async Task NewEventAsync()
@@ -30,7 +60,14 @@ namespace Events.Bot.Modules
             var permittedRoles = await PermittedRoleDataAccessLayer.GetAllByGuild(Context.Guild.Id);
             if (!await UserIsPermitted())
             {
-                await ReplyAsync("Not allowed!");
+                await ReplyAsync("You are not allowed to create new events. Only administrators and permitted roles can.");
+                return;
+            }
+
+            if (Context.Guild.Channels.Count() > (GUILD_CHANNELS_CAP - REQUIRED_AVAILABLE_CHANNELS_COUNT) ||
+                Context.Guild.Roles.Count() > (GUILD_ROLES_CAP - REQUIRED_AVAILABLE_ROLES_COUNT))
+            {
+                await ReplyAsync("This server is nearing the maximum amount of roles or channels, thus a new event cannot be created.");
                 return;
             }
 
@@ -119,7 +156,7 @@ namespace Events.Bot.Modules
                 break;
             }
 
-            await Context.Channel.SendMessageAsync($"The event will start on {string.Format("{0:f}", start)}. How long will the event last? Please provide the duration as HH:MM:SS.");
+            await Context.Channel.SendMessageAsync($"The event will start on {string.Format("{0:g}", start)}. How long will the event last? Please provide the duration as HH:MM:SS.");
             TimeSpan duration;
             while (true)
             {
@@ -144,22 +181,23 @@ namespace Events.Bot.Modules
                     continue;
                 }
 
-                if (duration.TotalMinutes < 10)
+                if (duration < TimeSpan.FromMinutes(10) || duration >= TimeSpan.FromHours(24))
                 {
-                    await Context.Channel.SendMessageAsync($"Please provide a duration that is longer than at least 10 minutes.");
+                    await Context.Channel.SendMessageAsync($"Please provide a duration that is between 10 minutes and 24 hours.");
                     continue;
                 }
 
                 break;
             }
 
+            string durationFormatted = $"{(duration.Hours >= 1 ? $"{duration.Hours} {(duration.Hours > 1 ? "hours" : "hour")}" : "")}{(duration.TotalMinutes > 60 ? " and " : "")}{(duration.Minutes > 0 ? $"{duration.Minutes} {(duration.Minutes > 1 ? "minutes" : "minute")}" : "")}";
+
             var eventId = Guid.NewGuid();
             var eventIdSubstring = eventId.ToString().Substring(0, 7);
 
-            await Context.Channel.SendMessageAsync($"The event will last for {(duration.TotalHours >= 1 ? $"{duration.Hours} hour(s) and {duration.Minutes} minute(s)" : $"{duration.Minutes} minute(s)")}. Do you want to add any stewards? Please mention them or respond with \"skip\".");
-            ulong stewardRoleId = 0;
+            await Context.Channel.SendMessageAsync($"The event will last for {durationFormatted}. Do you want to add any stewards? Please mention them or respond with \"skip\".");
             RestRole stewardRole = null;
-            var stewards = new List<SocketGuildUser>();
+            var stewards = new List<RestGuildUser>();
             while (true)
             {
                 var response = await NextMessageAsync();
@@ -178,7 +216,6 @@ namespace Events.Bot.Modules
                 }
 
                 stewardRole = await Context.Guild.CreateRoleAsync(eventIdSubstring + " Steward", isHoisted: false, isMentionable: false);
-                stewardRoleId = stewardRole.Id;
 
                 if (content.ToLower() == "skip")
                     break;
@@ -188,7 +225,7 @@ namespace Events.Bot.Modules
                     if (!MentionUtils.TryParseUser(mention, out ulong userId))
                         continue;
 
-                    var user = Context.Guild.GetUser(userId);
+                    var user = await Context.Client.Rest.GetGuildUserAsync(Context.Guild.Id, userId);
                     if (user == null || stewards.Contains(user))
                         continue;
 
@@ -200,9 +237,8 @@ namespace Events.Bot.Modules
             }
 
             await Context.Channel.SendMessageAsync($"Stewards have been set! Do you want to add any speakers? Please mention them or respond with \"skip\".");
-            ulong speakerRoleId = 0;
             RestRole speakerRole = null;
-            var speakers = new List<SocketGuildUser>();
+            var speakers = new List<RestGuildUser>();
             while (true)
             {
                 var response = await NextMessageAsync();
@@ -222,7 +258,6 @@ namespace Events.Bot.Modules
                 }
 
                 speakerRole = await Context.Guild.CreateRoleAsync(eventIdSubstring + " Speaker", isHoisted: false, isMentionable: false);
-                speakerRoleId = stewardRole.Id;
 
                 if (content.ToLower() == "skip")
                     break;
@@ -232,7 +267,7 @@ namespace Events.Bot.Modules
                     if (!MentionUtils.TryParseUser(mention, out ulong userId))
                         continue;
 
-                    var user = Context.Guild.GetUser(userId);
+                    var user = await Context.Client.Rest.GetGuildUserAsync(Context.Guild.Id, userId);
                     if (user == null || speakers.Contains(user))
                         continue;
 
@@ -297,7 +332,7 @@ namespace Events.Bot.Modules
                 var voiceChannel = await Context.Guild.CreateVoiceChannelAsync("Event " + eventIdSubstring, x => x.CategoryId = category.Id);
                 var controlChannel = await Context.Guild.CreateTextChannelAsync(eventIdSubstring + "-control", x => x.CategoryId = category.Id);
 
-                await EventsDataAccessLayer.Create(eventId, Context.Guild.Id, Context.User.Id, title, start, duration, category.Id, textChannel.Id, voiceChannel.Id, controlChannel.Id, stewardRoleId, speakerRoleId, attendeeRole.Id, cosmeticRoleId, false);
+                await EventsDataAccessLayer.Create(eventId, Context.Guild.Id, Context.User.Id, title, start, duration, category.Id, textChannel.Id, voiceChannel.Id, controlChannel.Id, stewardRole.Id, speakerRole.Id, attendeeRole.Id, cosmeticRoleId, false);
 
                 var eventsChannel = Context.Guild.GetTextChannel(Configuration.GetValue<ulong>("Events"));
 
@@ -310,8 +345,8 @@ namespace Events.Bot.Modules
                     })
                     .WithDescription(description)
                     .WithColor(Colours.Primary)
-                    .AddField("Start", string.Format("{0:f}", start), true)
-                    .AddField("Duration", duration.TotalHours >= 1 ? $"{duration.Hours} hour(s) and {duration.Minutes} minute(s)" : $"{duration.Minutes} minute(s)", true)
+                    .AddField("Start", string.Format("{0:g}", start), true)
+                    .AddField("Duration", durationFormatted, true)
                     .AddField("Organiser", Context.User.Mention, true)
                     .WithFooter($"{eventIdSubstring} · {eventId}");
 
