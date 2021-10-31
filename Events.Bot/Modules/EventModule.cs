@@ -23,7 +23,7 @@ namespace Events.Bot.Modules
 
         private readonly int TITLE_CHAR_LIMIT = 128;
         private readonly int DESC_CHAR_LIMIT = 1536;
-        private readonly int REQUIRED_AVAILABLE_ROLES_COUNT = 3;
+        private readonly int REQUIRED_AVAILABLE_ROLES_COUNT = 4;
         private readonly int REQUIRED_AVAILABLE_CHANNELS_COUNT = 3;
         private readonly int GUILD_ROLES_CAP = 250;
         private readonly int GUILD_CHANNELS_CAP = 500;
@@ -50,6 +50,10 @@ namespace Events.Bot.Modules
             {
                 await role.DeleteAsync();
             }
+
+            var eventsChannel = Context.Guild.GetTextChannel(Configuration.GetValue<ulong>("Events"));
+            var messages = await eventsChannel.GetMessagesAsync(100).FlattenAsync();
+            await eventsChannel.DeleteMessagesAsync(messages);
 
             await Context.Channel.SendMessageAsync("Clean-up finished!");
         }
@@ -190,7 +194,7 @@ namespace Events.Bot.Modules
                 break;
             }
 
-            string durationFormatted = $"{(duration.Hours >= 1 ? $"{duration.Hours} {(duration.Hours > 1 ? "hours" : "hour")}" : "")}{(duration.TotalMinutes > 60 ? " and " : "")}{(duration.Minutes > 0 ? $"{duration.Minutes} {(duration.Minutes > 1 ? "minutes" : "minute")}" : "")}";
+            string durationFormatted = $"{(duration.Hours >= 1 ? $"{duration.Hours} {(duration.Hours > 1 ? "hours" : "hour")}" : "")}{(duration.Hours >= 1 && duration.Minutes >= 1 ? " and " : "")}{(duration.Minutes > 0 ? $"{duration.Minutes} {(duration.Minutes > 1 ? "minutes" : "minute")}" : "")}";
 
             var eventId = Guid.NewGuid();
             var eventIdSubstring = eventId.ToString().Substring(0, 7);
@@ -326,15 +330,38 @@ namespace Events.Bot.Modules
             try
             {
                 var attendeeRole = await Context.Guild.CreateRoleAsync(eventIdSubstring + " Attendee", isHoisted: false, isMentionable: false);
+                var hostRole = await Context.Guild.CreateRoleAsync(eventIdSubstring + " Host", isHoisted: false, isMentionable: false);
 
-                var category = await Context.Guild.CreateCategoryChannelAsync("Event " + eventIdSubstring);
+                var categoryOverwrites = new List<Overwrite>();
+                categoryOverwrites.Add(new Overwrite(Context.Guild.EveryoneRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Deny)));
+                categoryOverwrites.Add(new Overwrite(hostRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
+                categoryOverwrites.Add(new Overwrite(stewardRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
+                categoryOverwrites.Add(new Overwrite(speakerRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
+                categoryOverwrites.Add(new Overwrite(attendeeRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
+
+                var category = await Context.Guild.CreateCategoryChannelAsync("Event " + eventIdSubstring, x => x.PermissionOverwrites = categoryOverwrites);
                 var textChannel = await Context.Guild.CreateTextChannelAsync(eventIdSubstring + "-general", x => x.CategoryId = category.Id);
                 var voiceChannel = await Context.Guild.CreateVoiceChannelAsync("Event " + eventIdSubstring, x => x.CategoryId = category.Id);
                 var controlChannel = await Context.Guild.CreateTextChannelAsync(eventIdSubstring + "-control", x => x.CategoryId = category.Id);
 
-                await EventsDataAccessLayer.Create(eventId, Context.Guild.Id, Context.User.Id, title, start, duration, category.Id, textChannel.Id, voiceChannel.Id, controlChannel.Id, stewardRole.Id, speakerRole.Id, attendeeRole.Id, cosmeticRoleId, false);
+                await textChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Allow, sendMessages: PermValue.Deny));
+                await voiceChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Allow, connect: PermValue.Deny, speak: PermValue.Deny, stream: PermValue.Deny));
+                await voiceChannel.AddPermissionOverwriteAsync(hostRole, new OverwritePermissions(viewChannel: PermValue.Allow, muteMembers: PermValue.Allow, deafenMembers: PermValue.Allow, moveMembers: PermValue.Allow));
+                await voiceChannel.AddPermissionOverwriteAsync(stewardRole, new OverwritePermissions(viewChannel: PermValue.Allow, muteMembers: PermValue.Allow, deafenMembers: PermValue.Allow, moveMembers: PermValue.Allow));
+                await voiceChannel.AddPermissionOverwriteAsync(speakerRole, new OverwritePermissions(viewChannel: PermValue.Allow));
+                await controlChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Deny));
+                await controlChannel.AddPermissionOverwriteAsync(speakerRole, new OverwritePermissions(viewChannel: PermValue.Deny));
 
-                var eventsChannel = Context.Guild.GetTextChannel(Configuration.GetValue<ulong>("Events"));
+                var controlPanelBuilder = new EmbedBuilder()
+                    .WithAuthor(x =>
+                    {
+                        x
+                        .WithName($"Event {eventIdSubstring}");
+                    })
+                    .WithColor(Colours.Primary)
+                    .AddField("ID", eventId, true)
+                    .AddField("Short ID", eventIdSubstring, true)
+                    .AddField("Host", Context.User.Mention, true);
 
                 var eventPanelBuilder = new EmbedBuilder()
                     .WithAuthor(x =>
@@ -351,12 +378,28 @@ namespace Events.Bot.Modules
                     .WithFooter($"{eventIdSubstring} · {eventId}");
 
                 if (speakers.Count() > 0)
+                {
                     eventPanelBuilder.AddField($"Speakers ({speakers.Count()})", string.Join(" ", speakers.Select(x => x.Mention)));
+                    controlPanelBuilder.AddField($"Speakers ({speakers.Count()})", string.Join(" ", speakers.Select(x => x.Mention)));
+                }
+                
+                if (stewards.Count() > 0)
+                    controlPanelBuilder.AddField($"Stewards ({stewards.Count()})", string.Join(" ", stewards.Select(x => x.Mention)));
 
-                var eventPannelButtonsBuilder = new ComponentBuilder()
+                var eventPanelButtonsBuilder = new ComponentBuilder()
                     .WithButton("Sign up", "sign_up", ButtonStyle.Success);
 
-                await eventsChannel.SendMessageAsync(embed: eventPanelBuilder.Build(), component: eventPannelButtonsBuilder.Build());
+                var controlPanelButtonsBuilder = new ComponentBuilder()
+                    .WithButton("Start", "start", ButtonStyle.Success)
+                    .WithButton("Stop", "stop", ButtonStyle.Danger)
+                    .WithButton("Mass mute", "mass_mute", ButtonStyle.Danger)
+                    .WithButton("Mass unmute", "mass_unmute", ButtonStyle.Danger);
+
+                var eventsChannel = Context.Guild.GetTextChannel(Configuration.GetValue<ulong>("Events"));
+                var eventPanel = await eventsChannel.SendMessageAsync(embed: eventPanelBuilder.Build(), component: eventPanelButtonsBuilder.Build());
+                var controlPanel = await controlChannel.SendMessageAsync(embed: controlPanelBuilder.Build(), component: controlPanelButtonsBuilder.Build());
+
+                await EventsDataAccessLayer.Create(eventId, Context.Guild.Id, Context.User.Id, title, start, duration, category.Id, textChannel.Id, voiceChannel.Id, controlChannel.Id, stewardRole.Id, speakerRole.Id, attendeeRole.Id, cosmeticRoleId, false);
             }
             catch (Exception ex)
             {
