@@ -22,10 +22,7 @@
         public Task<Event> GetByTitle(ulong guildId, string title);
 
         // Create
-        public Task Create(Guid eventId, ulong guildId, ulong organiser, string eventTitle,
-            DateTime eventStart,
-            TimeSpan eventDuration, ulong categoryId, ulong textChannelId, ulong voiceChannelId, ulong controlPanelId,
-            ulong stewardRoleId, ulong speakerRoleId, ulong attendeeRoleId, ulong cosmeticRoleId, bool eventComplete);
+        public Task Create(Event @event);
 
         // Update
         public Task UpdateOrganiser(Guid eventId, ulong organiser);

@@ -216,5 +216,193 @@ namespace Events.Bot
         {
             return await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id && x.Channel.Id == Context.Channel.Id);
         }
+
+        public async Task<T> Ask<T>(
+            int min = 0,
+            int max = 0,
+            string minMaxError = null,
+            string cancelMessage = "Cancelled.",
+            bool shortNameCheck = false,
+            string timedOutMessage = "You didn't respond in time, please run the command again.",
+            string parseFailedMessage = "Please provide a response containing the correct type.")
+        {
+            switch (typeof(T))
+            {
+                case var cls when cls == typeof(string):
+                    string @string = string.Empty;
+                    while (true)
+                    {
+                        var response = await NextMessageAsync();
+                        if (response.IsTimeouted || response.Value == null)
+                        {
+                            await Context.Channel.SendMessageAsync(timedOutMessage);
+                            return default(T);
+                        }
+
+                        string content = response.Value.Content;
+
+                        if (content.ToLower() == "cancel")
+                        {
+                            await Context.Channel.SendMessageAsync(cancelMessage);
+                            return default(T);
+                        }
+
+                        if (max > 0 && content.Length > max)
+                        {
+                            await Context.Channel.SendMessageAsync(minMaxError);
+                            continue;
+                        }
+
+                        if (shortNameCheck == true && Context.Guild.CategoryChannels.Any(x => x.Name.ToLower().Contains(content.ToLower())))
+                        {
+                            await Context.Channel.SendMessageAsync($"That short name is already in use, please provide a different one.");
+                            continue;
+                        }
+
+                        @string = content;
+                        break;
+                    }
+                    return (T)Convert.ChangeType(@string, typeof(T));
+                case var cls when cls == typeof(DateTime):
+                    var dateTime = new DateTime();
+                    while (true)
+                    {
+                        var response = await NextMessageAsync();
+                        if (response.IsTimeouted || response.Value == null)
+                        {
+                            await Context.Channel.SendMessageAsync(timedOutMessage);
+                            return default(T);
+                        }
+
+                        string content = response.Value.Content;
+
+                        if (content.ToLower() == "cancel")
+                        {
+                            await Context.Channel.SendMessageAsync(cancelMessage);
+                            return default(T);
+                        }
+
+                        if (!DateTime.TryParse(content, out dateTime))
+                        {
+                            await Context.Channel.SendMessageAsync(parseFailedMessage);
+                            continue;
+                        }
+                        break;
+                    }
+                    return (T)Convert.ChangeType(dateTime, typeof(T));
+                case var cls when cls == typeof(TimeSpan):
+                    var timeSpan = new TimeSpan();
+                    while (true)
+                    {
+                        var response = await NextMessageAsync();
+                        if (response.IsTimeouted || response.Value == null)
+                        {
+                            await Context.Channel.SendMessageAsync(timedOutMessage);
+                            return default(T);
+                        }
+
+                        string content = response.Value.Content;
+
+                        if (content.ToLower() == "cancel")
+                        {
+                            await Context.Channel.SendMessageAsync(cancelMessage);
+                            return default(T);
+                        }
+
+                        if (!TimeSpan.TryParse(content, out timeSpan))
+                        {
+                            await Context.Channel.SendMessageAsync(parseFailedMessage);
+                            continue;
+                        }
+
+                        if (timeSpan < TimeSpan.FromMinutes(min) || timeSpan >= TimeSpan.FromHours(max))
+                        {
+                            await Context.Channel.SendMessageAsync(minMaxError);
+                            continue;
+                        }
+
+                        break;
+                    }
+                    return (T)Convert.ChangeType(timeSpan, typeof(T));
+                case var cls when cls == typeof(List<RestGuildUser>):
+                    var users = new List<RestGuildUser>();
+                    while (true)
+                    {
+                        var response = await NextMessageAsync();
+                        if (response.IsTimeouted || response.Value == null)
+                        {
+                            await Context.Channel.SendMessageAsync(timedOutMessage);
+                            return default(T);
+                        }
+
+                        string content = response.Value.Content;
+
+                        if (content.ToLower() == "cancel")
+                        {
+                            await Context.Channel.SendMessageAsync(cancelMessage);
+                            return default(T);
+                        }
+
+                        if (content.ToLower() == "skip")
+                            break;
+
+                        foreach (var mention in content.Split(" "))
+                        {
+                            if (!MentionUtils.TryParseUser(mention, out ulong userId))
+                                continue;
+
+                            var user = await Context.Client.Rest.GetGuildUserAsync(Context.Guild.Id, userId);
+                            if (user == null || users.Contains(user))
+                                continue;
+
+                            users.Add(user);
+                        }
+
+                        break;
+                    }
+                    return (T)Convert.ChangeType(users, typeof(T));
+                case var cls when cls == typeof(SocketRole):
+                    var socketRole = Context.Guild.EveryoneRole;
+                    while (true)
+                    {
+                        var response = await NextMessageAsync();
+                        if (response.IsTimeouted || response.Value == null)
+                        {
+                            await Context.Channel.SendMessageAsync(cancelMessage);
+                            return default(T);
+                        }
+
+                        string content = response.Value.Content;
+
+                        if (content.ToLower() == "cancel")
+                        {
+                            await Context.Channel.SendMessageAsync(cancelMessage);
+                            return default(T);
+                        }
+
+                        if (content.ToLower() == "skip")
+                            break;
+
+                        if (!MentionUtils.TryParseRole(content, out ulong roleId))
+                        {
+                            await Context.Channel.SendMessageAsync(parseFailedMessage);
+                            continue;
+                        }
+
+                        var role = Context.Guild.GetRole(roleId);
+                        if (role == null)
+                        {
+                            await Context.Channel.SendMessageAsync("That role does not exist, please provide a valid role.");
+                            continue;
+                        }
+
+                        socketRole = role;
+                        break;
+                    }
+                    return (T)Convert.ChangeType(socketRole, typeof(T));
+            }
+
+            throw new NotImplementedException("This type could not be requested.");
+        }
     }
 }

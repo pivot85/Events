@@ -3,14 +3,16 @@ using System;
 using Events.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Events.Data.Migrations
 {
     [DbContext(typeof(EventsDbContext))]
-    partial class EventsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20211109202621_AddedPanelIds")]
+    partial class AddedPanelIds
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,9 +40,6 @@ namespace Events.Data.Migrations
                     b.Property<ulong>("CosmeticRole")
                         .HasColumnType("bigint unsigned");
 
-                    b.Property<string>("Description")
-                        .HasColumnType("longtext");
-
                     b.Property<TimeSpan>("Duration")
                         .HasColumnType("time(6)");
 
@@ -55,9 +54,6 @@ namespace Events.Data.Migrations
 
                     b.Property<ulong>("Organiser")
                         .HasColumnType("bigint unsigned");
-
-                    b.Property<string>("ShortName")
-                        .HasColumnType("longtext");
 
                     b.Property<ulong>("SpeakerRole")
                         .HasColumnType("bigint unsigned");

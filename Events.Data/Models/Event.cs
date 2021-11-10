@@ -27,6 +27,10 @@
         /// </summary>
         public string Title { get; set; }
 
+        public string Description { get; set; }
+
+        public string ShortName { get; set; }
+
         /// <summary>
         /// Gets or Sets the Start for the event.
         /// </summary>
@@ -56,6 +60,16 @@
         /// Gets or Sets the Admin Control Panel Channel for the event.
         /// </summary>
         public ulong ControlChannel { get; set; }
+
+        /// <summary>
+        /// Gets or sets the ID of the control panel of ad hoc event.
+        /// </summary>
+        public ulong ControlPanel { get; set; }
+
+        /// <summary>
+        /// Gets or sets the ID of the panel of the event, allowing members to (un)register.
+        /// </summary>
+        public ulong EventPanel { get; set; }
 
         /// <summary>
         /// Gets or Sets the Steward (Mod) Role for the event.

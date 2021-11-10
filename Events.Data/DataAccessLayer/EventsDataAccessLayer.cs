@@ -92,58 +92,12 @@
         /// <summary>
         /// Create a new event.
         /// </summary>
-        /// <param name="eventId">The Id of the event.</param>
-        /// <param name="guild">The Id of the guild that the event is run.</param>
-        /// <param name="organiser">The Id of the organiser of the event.</param>
-        /// <param name="title">The title of the event.</param>
-        /// <param name="eventStart">The start-time of the event.</param>
-        /// <param name="eventDuration">The duration of the event.</param>
-        /// <param name="categoryId">The Id of the category of the event.</param>
-        /// <param name="textChannelId">The Id of the generated discussion channel of the event.</param>
-        /// <param name="voiceChannelId">The Id of the generated voice channel of the event. </param>
-        /// <param name="controlPanelId">The Id of the Control Panel Channel of the event.</param>
-        /// <param name="stewardRoleId">The Id of the Steward (Event Moderator) Role. </param>
-        /// <param name="speakerRoleId">The Id of the Speaker Role.</param>
-        /// <param name="attendeeRoleId">The Id of the Attendee Role.</param>
-        /// <param name="cosmeticRoleId">The Id of the Cosmetic Role.</param>
-        /// <param name="eventComplete">A bool representing the status.</param>
+        /// <param name="event">The event to create.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task Create(
-            Guid eventId,
-            ulong guild,
-            ulong organiser,
-            string title,
-            DateTime eventStart,
-            TimeSpan eventDuration,
-            ulong categoryId,
-            ulong textChannelId,
-            ulong voiceChannelId,
-            ulong controlPanelId,
-            ulong stewardRoleId,
-            ulong speakerRoleId,
-            ulong attendeeRoleId,
-            ulong cosmeticRoleId,
-            bool eventComplete)
+        public async Task Create(Event @event)
         {
             using var context = _contextFactory.CreateDbContext();
-            context.Add(new Event
-            {
-                Id = eventId,
-                Guild = guild,
-                Organiser = organiser,
-                Title = title,
-                Start = eventStart,
-                Duration = eventDuration,
-                Category = categoryId,
-                TextChannel = textChannelId,
-                VoiceChannel = voiceChannelId,
-                ControlChannel = controlPanelId,
-                StewardRole = stewardRoleId,
-                SpeakerRole = speakerRoleId,
-                AttendeeRole = attendeeRoleId,
-                CosmeticRole = cosmeticRoleId,
-                IsCompleted = eventComplete,
-            });
+            context.Add(@event);
 
             await context.SaveChangesAsync();
         }
