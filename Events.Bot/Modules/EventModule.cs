@@ -2,7 +2,9 @@
 using Discord.Commands;
 using Discord.Rest;
 using Discord.WebSocket;
-using Events.Bot.Utils;
+using Events.Bot.Common;
+using Events.Bot.Common.RequestResult;
+using Events.Bot.Extensions;
 using Events.Data.DataAccessLayer;
 using Events.Data.Models;
 using Interactivity;
@@ -57,88 +59,123 @@ namespace Events.Bot.Modules
             var messages = await eventsChannel.GetMessagesAsync(100).FlattenAsync();
             await eventsChannel.DeleteMessagesAsync(messages);
 
+            await Context.Guild.DeleteApplicationCommandsAsync();
+
             await Context.Channel.SendMessageAsync("Clean-up finished!");
         }
 
         [Command("new")]
         public async Task NewEventAsync()
         {
+            await Context.Interaction.DeferAsync();
+
             var permittedRoles = await PermittedRoleDataAccessLayer.GetAllByGuild(Context.Guild.Id);
             if (!await UserIsPermitted())
             {
-                await ReplyAsync("You are not allowed to create new events. Only administrators and permitted roles can.");
+                await Context.Interaction.FollowupAsync("You are not allowed to create new events. Only administrators and permitted roles can.");
                 return;
             }
 
             if (Context.Guild.Channels.Count() > (GUILD_CHANNELS_CAP - REQUIRED_AVAILABLE_CHANNELS_COUNT) ||
                 Context.Guild.Roles.Count() > (GUILD_ROLES_CAP - REQUIRED_AVAILABLE_ROLES_COUNT))
             {
-                await ReplyAsync("This server is nearing the maximum amount of roles or channels, thus a new event cannot be created.");
+                await Context.Interaction.FollowupAsync("This server is nearing the maximum amount of roles or channels, thus a new event cannot be created.");
                 return;
             }
 
-            await ReplyAsync($"Let's create a new event. If you want to cancel at any time, you can respond with \"cancel\". First, what would you like the title to be? The title must be shorter than {TITLE_CHAR_LIMIT} characters.");
-            var title = await Ask<string>(max: TITLE_CHAR_LIMIT, minMaxError: $"Please provide a title that is shorter than or equal to {TITLE_CHAR_LIMIT} characters.");
-            if (title == null)
+            var titleResult = await Ask<string>(
+                $"Let's create a new event. If you want to cancel at any time, you can respond with \"cancel\". " +
+                $"First, what would you like the title to be? The title must be shorter than {TITLE_CHAR_LIMIT} characters.",
+                max: TITLE_CHAR_LIMIT, 
+                minMaxError: $"Please provide a title that is shorter than or equal to {TITLE_CHAR_LIMIT} characters.");
+            if (titleResult.Type == RequestResultType.Cancelled)
                 return;
 
-            await Context.Channel.SendMessageAsync($"Title set! What description would you like the event to have? It must be shorter than {DESC_CHAR_LIMIT} characters.");
-            string description = await Ask<string>(max: DESC_CHAR_LIMIT, minMaxError: $"Please pick a description that is shorter than {DESC_CHAR_LIMIT} characters.");
-            if (description == null)
+            var descriptionResult = await Ask<string>(
+                $"Title set! What description would you like the event to have? It must be shorter than {DESC_CHAR_LIMIT} characters.",
+                max: DESC_CHAR_LIMIT,
+                minMaxError: $"Please pick a description that is shorter than {DESC_CHAR_LIMIT} characters.");
+            if (descriptionResult.Type == RequestResultType.Cancelled)
                 return;
 
-            await Context.Channel.SendMessageAsync("Description set! What would you like the short name of this event to be? This will appear in the channels. This can contain a maximum of 16 characters.");
-            string shortName = await Ask<string>(max: SHORT_NAME_CHAR_LIMIT, minMaxError: $"Please provide a short name containing less than or equal to {SHORT_NAME_CHAR_LIMIT} characters.");
-            if (shortName == null)
+            var shortNameResult = await Ask<string>(
+                $"Description set! What would you like the short name of this event to be? " +
+                $"This will appear in the channels. This can contain a maximum of {SHORT_NAME_CHAR_LIMIT} characters.",
+                max: SHORT_NAME_CHAR_LIMIT,
+                minMaxError: $"Please provide a short name containing less than or equal to {SHORT_NAME_CHAR_LIMIT} characters.",
+                criterion: RequestCriterion.ShortName);
+            if (shortNameResult.Type == RequestResultType.Cancelled)
                 return;
 
-            await Context.Channel.SendMessageAsync("All set. When should the event take place? Please format it as mm/dd/yyyy HH:MM:SS");
-            var start = await Ask<DateTime>(minMaxError: "Please provide a properly formatted date and time for the start of the event.");
-            if (start.Year == 1)
+            var startResult = await Ask<DateTime>(
+                "All set. When should the event take place? Please format it as mm/dd/yyyy HH:MM:SS",
+                minMaxError: "Please provide a properly formatted date and time for the start of the event.");
+            if (startResult.Type == RequestResultType.Cancelled)
                 return;
 
-            await Context.Channel.SendMessageAsync($"The event will start on {string.Format("{0:g}", start)}. How long will the event last? Please provide the duration as HH:MM:SS.");
-            var duration = await Ask<TimeSpan>(10, 24, "Please provide a duration that is between 10 minutes and 24 hours.", parseFailedMessage: "Please provide a duration formatted as HH:MM:SS.");
-            if (duration == TimeSpan.Zero)
+            var durationResult = await Ask<TimeSpan>(
+                $"The event will start on {string.Format("{0:g}", startResult.Value)}. How long will the event last? Please provide the duration as HH:MM:SS.",
+                10, 
+                24, 
+                "Please provide a duration that is between 10 minutes and 24 hours.",
+                parseFailedMessage: "Please provide a duration formatted as HH:MM:SS.");
+            if (durationResult.Type == RequestResultType.Cancelled)
                 return;
+            
+            var stewardRole = await Context.Guild.CreateRoleAsync(shortNameResult.Value + " Steward", isHoisted: false, isMentionable: false);
+            var stewardsResult = await Ask<List<RestGuildUser>>(
+                $"The event will last for {durationResult.Value.ToHoursMinutes()}. Do you want to add any stewards? Please mention them or respond with \"skip\".");
 
-            string durationFormatted = $"{(duration.Hours >= 1 ? $"{duration.Hours} {(duration.Hours > 1 ? "hours" : "hour")}" : "")}{(duration.Hours >= 1 && duration.Minutes >= 1 ? " and " : "")}{(duration.Minutes > 0 ? $"{duration.Minutes} {(duration.Minutes > 1 ? "minutes" : "minute")}" : "")}";
-
-            await Context.Channel.SendMessageAsync($"The event will last for {durationFormatted}. Do you want to add any stewards? Please mention them or respond with \"skip\".");
-            var stewardRole = await Context.Guild.CreateRoleAsync(shortName + " Steward", isHoisted: false, isMentionable: false);
-            var stewards = await Ask<List<RestGuildUser>>();
-
-            // TODO: only delete when response was cancel
-            if (stewards.Count == 0)
+            if (stewardsResult.Type == RequestResultType.Cancelled)
             {
                 await stewardRole.DeleteAsync();
                 return;
             }
 
-            await Context.Channel.SendMessageAsync($"Stewards have been set! Do you want to add any speakers? Please mention them or respond with \"skip\".");
-            var speakerRole = await Context.Guild.CreateRoleAsync(shortName + " Speaker", isHoisted: false, isMentionable: false);
-            var speakers = await Ask<List<RestGuildUser>>();
-
-            // TODO: only delete when response was cancel
-            if (speakers.Count == 0)
+            if (stewardsResult.Type == RequestResultType.Success)
             {
-                await stewardRole.DeleteAsync();
+                foreach (var user in stewardsResult.Value)
+                {
+                    await user.AddRoleAsync(stewardRole);
+                }
+            }
+
+            var speakerRole = await Context.Guild.CreateRoleAsync(shortNameResult.Value + " Speaker", isHoisted: false, isMentionable: false);
+            var speakersResult = await Ask<List<RestGuildUser>>(
+                $"Stewards have been set! Do you want to add any speakers? Please mention them or respond with \"skip\".");
+
+            if (speakersResult.Type == RequestResultType.Cancelled)
+            {
                 await speakerRole.DeleteAsync();
                 return;
+            }
+
+            if (speakersResult.Type == RequestResultType.Success)
+            {
+                foreach (var user in speakersResult.Value)
+                {
+                    await user.AddRoleAsync(speakerRole);
+                }
             }
 
             ulong cosmeticRoleId = 0;
             if ((Context.User as SocketGuildUser).GuildPermissions.Administrator)
             {
-                await Context.Channel.SendMessageAsync($"Is there a role you'd like to use as a cosmetic role? Please mention it or respond with \"skip\".");
-                cosmeticRoleId = (await Ask<SocketRole>()).Id;
+                var cosmeticRoleResult = await Ask<SocketRole>(
+                    $"Is there a role you'd like to use as a cosmetic role? Please mention it or respond with \"skip\".");
+
+                if (cosmeticRoleResult.Type == RequestResultType.Cancelled)
+                    return;
+
+                if (cosmeticRoleResult.Type == RequestResultType.Success)
+                    cosmeticRoleId = cosmeticRoleResult.Value.Id;
             }
 
             var message = await Context.Channel.SendMessageAsync("All set! Time to create the event...");
             try
             {
-                var attendeeRole = await Context.Guild.CreateRoleAsync(shortName + " Attendee", isHoisted: false, isMentionable: false);
-                var hostRole = await Context.Guild.CreateRoleAsync(shortName + " Host", isHoisted: false, isMentionable: false);
+                var attendeeRole = await Context.Guild.CreateRoleAsync(shortNameResult.Value + " Attendee", isHoisted: false, isMentionable: false);
+                var hostRole = await Context.Guild.CreateRoleAsync(shortNameResult.Value + " Host", isHoisted: false, isMentionable: false);
 
                 var categoryOverwrites = new List<Overwrite>();
                 categoryOverwrites.Add(new Overwrite(Context.Guild.EveryoneRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Deny)));
@@ -147,10 +184,10 @@ namespace Events.Bot.Modules
                 categoryOverwrites.Add(new Overwrite(speakerRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
                 categoryOverwrites.Add(new Overwrite(attendeeRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
 
-                var category = await Context.Guild.CreateCategoryChannelAsync("Event " + shortName, x => x.PermissionOverwrites = categoryOverwrites);
-                var textChannel = await Context.Guild.CreateTextChannelAsync(shortName + "-general", x => x.CategoryId = category.Id);
-                var voiceChannel = await Context.Guild.CreateVoiceChannelAsync("Event " + shortName, x => x.CategoryId = category.Id);
-                var controlChannel = await Context.Guild.CreateTextChannelAsync(shortName + "-control", x => x.CategoryId = category.Id);
+                var category = await Context.Guild.CreateCategoryChannelAsync("Event " + shortNameResult.Value, x => x.PermissionOverwrites = categoryOverwrites);
+                var textChannel = await Context.Guild.CreateTextChannelAsync(shortNameResult.Value + "-general", x => x.CategoryId = category.Id);
+                var voiceChannel = await Context.Guild.CreateVoiceChannelAsync("Event " + shortNameResult.Value, x => x.CategoryId = category.Id);
+                var controlChannel = await Context.Guild.CreateTextChannelAsync(shortNameResult.Value + "-control", x => x.CategoryId = category.Id);
 
                 await textChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Allow, sendMessages: PermValue.Deny));
                 await voiceChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Allow, connect: PermValue.Deny, speak: PermValue.Deny, stream: PermValue.Deny));
@@ -165,11 +202,11 @@ namespace Events.Bot.Modules
                     .WithAuthor(x =>
                     {
                         x
-                        .WithName($"Event {shortName}");
+                        .WithName($"Event {shortNameResult.Value}");
                     })
                     .WithColor(Colours.Primary)
                     .AddField("ID", eventId, true)
-                    .AddField("Short ID", shortName, true)
+                    .AddField("Short ID", shortNameResult.Value, true)
                     .AddField("Host", Context.User.Mention, true);
 
                 var eventPanelBuilder = new EmbedBuilder()
@@ -177,23 +214,23 @@ namespace Events.Bot.Modules
                     {
                         x
                         .WithIconUrl(Icons.Ticket)
-                        .WithName(title);
+                        .WithName(titleResult.Value);
                     })
-                    .WithDescription(description)
+                    .WithDescription(descriptionResult.Value)
                     .WithColor(Colours.Primary)
-                    .AddField("Start", string.Format("{0:g}", start), true)
+                    .AddField("Start", string.Format("{0:g}", startResult.Value), true)
                     .AddField("Duration", durationFormatted, true)
                     .AddField("Organiser", Context.User.Mention, true)
-                    .WithFooter($"{shortName} · {eventId}");
+                    .WithFooter($"{shortNameResult.Value} · {eventId}");
 
-                if (speakers.Count() > 0)
+                if (speakersResult.Value.Count() > 0)
                 {
-                    eventPanelBuilder.AddField($"Speakers ({speakers.Count()})", string.Join(" ", speakers.Select(x => x.Mention)));
-                    controlPanelBuilder.AddField($"Speakers ({speakers.Count()})", string.Join(" ", speakers.Select(x => x.Mention)));
+                    eventPanelBuilder.AddField($"Speakers ({speakersResult.Value.Count()})", string.Join(" ", speakersResult.Value.Select(x => x.Mention)));
+                    controlPanelBuilder.AddField($"Speakers ({speakersResult.Value.Count()})", string.Join(" ", speakersResult.Value.Select(x => x.Mention)));
                 }
                 
-                if (stewards.Count() > 0)
-                    controlPanelBuilder.AddField($"Stewards ({stewards.Count()})", string.Join(" ", stewards.Select(x => x.Mention)));
+                if (stewardsResult.Value.Count() > 0)
+                    controlPanelBuilder.AddField($"Stewards ({stewardsResult.Value.Count()})", string.Join(" ", stewardsResult.Value.Select(x => x.Mention)));
 
                 var eventPanelButtonsBuilder = new ComponentBuilder()
                     .WithButton("Sign up", "sign_up", ButtonStyle.Success);
@@ -210,13 +247,13 @@ namespace Events.Bot.Modules
                 var @event = new Event
                 {
                     Id = eventId,
-                    Title = title,
-                    Description = description,
-                    ShortName = shortName,
+                    Title = titleResult.Value,
+                    Description = descriptionResult.Value,
+                    ShortName = shortNameResult.Value,
                     Guild = Context.Guild.Id,
                     Organiser = Context.User.Id,
-                    Start = start,
-                    Duration = duration,
+                    Start = startResult.Value,
+                    Duration = durationResult.Value,
                     Category = category.Id,
                     TextChannel = textChannel.Id,
                     VoiceChannel = voiceChannel.Id,

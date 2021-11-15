@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Events.Bot.Utils
+namespace Events.Bot.Common
 {
     internal class DualCommandServiceRegistrationHost : IHostedService
     {

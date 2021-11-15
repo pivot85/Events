@@ -3,7 +3,7 @@ using Discord;
 using Discord.Addons.Hosting;
 using Discord.WebSocket;
 using Events.Bot.Handlers;
-using Events.Bot.Utils;
+using Events.Bot.Common;
 using Events.Data.Context;
 using Events.Data;
 using Microsoft.EntityFrameworkCore;

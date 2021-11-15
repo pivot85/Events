@@ -380,5 +380,27 @@
             context.Remove(eventId);
             await context.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// Determines whether or not an event with specified short name exists.
+        /// </summary>
+        /// <param name="guildId">The ID of the guild.</param>
+        /// <param name="shortName">The short name to check.</param>
+        /// <returns>A bool indicating whether or not the short name exists.</returns>
+        public bool ShortNameExists(ulong guildId, string shortName)
+        {
+            using var context = _contextFactory.CreateDbContext();
+
+            var @event = context.Events
+                .Where(x => x.IsCompleted == false && x.Guild == guildId)?
+                .FirstOrDefault(x => x.ShortName.ToLower() == shortName.ToLower());
+
+            if (@event == null)
+            {
+                return false;
+            }
+
+            return true;
+        }
     }
 }

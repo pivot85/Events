@@ -14,7 +14,7 @@
 #endregion
 using Discord;
 using Discord.Commands;
-using Events.Bot.Utils;
+using Events.Bot.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;

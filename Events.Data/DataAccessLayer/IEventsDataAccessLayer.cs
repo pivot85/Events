@@ -21,6 +21,8 @@
 
         public Task<Event> GetByTitle(ulong guildId, string title);
 
+        public bool ShortNameExists(ulong guildId, string shortName);
+
         // Create
         public Task Create(Event @event);
 

@@ -14,21 +14,19 @@ namespace Events.Bot.Handlers
 {
     public class CommandHandler : DiscordClientService
     {
-        private DiscordSocketClient _client;
         private IServiceProvider _services;
         private DualCommandService _commandService;
 
         public CommandHandler(DiscordSocketClient client, IServiceProvider provider, ILogger<DiscordClientService> logger)
             : base(client, logger)
         {
-            _client = client;
             _services = provider;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _client.SlashCommandExecuted += _client_SlashCommandExecuted;
-            _client.MessageReceived += _client_MessageReceived;
+            Client.SlashCommandExecuted += _client_SlashCommandExecuted;
+            Client.MessageReceived += _client_MessageReceived;
 
             _commandService = _services.GetRequiredService<DualCommandService>();
 
@@ -44,7 +42,7 @@ namespace Events.Bot.Handlers
 
         private async Task _client_SlashCommandExecuted(SocketSlashCommand arg)
         {
-            var context = new DualCommandContext(_client, arg);
+            var context = new DualCommandContext(Client, arg);
 
             await _commandService.ExecuteAsync(arg, context, _services).ConfigureAwait(false);
         }

@@ -2,6 +2,8 @@
 using Discord.Commands;
 using Discord.Rest;
 using Discord.WebSocket;
+using Events.Bot.Common;
+using Events.Bot.Common.RequestResult;
 using Events.Data.DataAccessLayer;
 using Interactivity;
 using Microsoft.Extensions.Configuration;
@@ -217,15 +219,19 @@ namespace Events.Bot
             return await Interactivity.NextMessageAsync(x => x.Author.Id == Context.User.Id && x.Channel.Id == Context.Channel.Id);
         }
 
-        public async Task<T> Ask<T>(
+        public async Task<IRequestResult<T>> Ask<T>(
+            string question = null,
             int min = 0,
             int max = 0,
             string minMaxError = null,
             string cancelMessage = "Cancelled.",
-            bool shortNameCheck = false,
-            string timedOutMessage = "You didn't respond in time, please run the command again.",
-            string parseFailedMessage = "Please provide a response containing the correct type.")
+            string timeOutMessage = "You didn't respond in time, please run the command again.",
+            string parseFailedMessage = "Please provide a response containing the correct type.",
+            RequestCriterion criterion = RequestCriterion.None)
         {
+            if (!string.IsNullOrEmpty(question))
+                await Context.Interaction.FollowupAsync(question);
+
             switch (typeof(T))
             {
                 case var cls when cls == typeof(string):
@@ -235,117 +241,118 @@ namespace Events.Bot
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Channel.SendMessageAsync(timedOutMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(timeOutMessage);
+                            return new StringRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         string content = response.Value.Content;
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Channel.SendMessageAsync(cancelMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            return new StringRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         if (max > 0 && content.Length > max)
                         {
-                            await Context.Channel.SendMessageAsync(minMaxError);
+                            await Context.Interaction.FollowupAsync(minMaxError);
                             continue;
                         }
 
-                        if (shortNameCheck == true && Context.Guild.CategoryChannels.Any(x => x.Name.ToLower().Contains(content.ToLower())))
+                        if (criterion == RequestCriterion.ShortName &&
+                            EventsDataAccessLayer.ShortNameExists(Context.Guild.Id, content))
                         {
-                            await Context.Channel.SendMessageAsync($"That short name is already in use, please provide a different one.");
+                            await Context.Interaction.FollowupAsync("That short name is already in use, please pick a different one.");
                             continue;
                         }
 
                         @string = content;
                         break;
                     }
-                    return (T)Convert.ChangeType(@string, typeof(T));
+                    return new StringRequestResult { Type = RequestResultType.Success, Value = @string } as IRequestResult<T>;
                 case var cls when cls == typeof(DateTime):
-                    var dateTime = new DateTime();
                     while (true)
                     {
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Channel.SendMessageAsync(timedOutMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(timeOutMessage);
+                            return new DateTimeRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         string content = response.Value.Content;
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Channel.SendMessageAsync(cancelMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            return new DateTimeRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
-                        if (!DateTime.TryParse(content, out dateTime))
+                        if (!DateTime.TryParse(content, out DateTime dateTime))
                         {
-                            await Context.Channel.SendMessageAsync(parseFailedMessage);
+                            await Context.Interaction.FollowupAsync(parseFailedMessage);
                             continue;
                         }
-                        break;
+
+                        return new DateTimeRequestResult { Type = RequestResultType.Success, Value = dateTime } as IRequestResult<T>;
                     }
-                    return (T)Convert.ChangeType(dateTime, typeof(T));
+                    
                 case var cls when cls == typeof(TimeSpan):
-                    var timeSpan = new TimeSpan();
                     while (true)
                     {
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Channel.SendMessageAsync(timedOutMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(timeOutMessage);
+                            return new TimeSpanRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         string content = response.Value.Content;
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Channel.SendMessageAsync(cancelMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            return new TimeSpanRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
-                        if (!TimeSpan.TryParse(content, out timeSpan))
+                        if (!TimeSpan.TryParse(content, out TimeSpan timeSpan))
                         {
-                            await Context.Channel.SendMessageAsync(parseFailedMessage);
+                            await Context.Interaction.FollowupAsync(parseFailedMessage);
                             continue;
                         }
 
                         if (timeSpan < TimeSpan.FromMinutes(min) || timeSpan >= TimeSpan.FromHours(max))
                         {
-                            await Context.Channel.SendMessageAsync(minMaxError);
+                            await Context.Interaction.FollowupAsync(minMaxError);
                             continue;
                         }
 
-                        break;
+                        return new TimeSpanRequestResult { Type = RequestResultType.Success, Value = timeSpan } as IRequestResult<T>;
                     }
-                    return (T)Convert.ChangeType(timeSpan, typeof(T));
                 case var cls when cls == typeof(List<RestGuildUser>):
-                    var users = new List<RestGuildUser>();
                     while (true)
                     {
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Channel.SendMessageAsync(timedOutMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(timeOutMessage);
+                            return new RestGuildUsersRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         string content = response.Value.Content;
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Channel.SendMessageAsync(cancelMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            return new RestGuildUsersRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         if (content.ToLower() == "skip")
-                            break;
+                        {
+                            return new RestGuildUsersRequestResult { Type = RequestResultType.Skipped } as IRequestResult<T>;
+                        }
 
+                        var users = new List<RestGuildUser>();
                         foreach (var mention in content.Split(" "))
                         {
                             if (!MentionUtils.TryParseUser(mention, out ulong userId))
@@ -358,51 +365,47 @@ namespace Events.Bot
                             users.Add(user);
                         }
 
-                        break;
+                        return new RestGuildUsersRequestResult { Type = RequestResultType.Success, Value = users } as IRequestResult<T>;
                     }
-                    return (T)Convert.ChangeType(users, typeof(T));
                 case var cls when cls == typeof(SocketRole):
-                    var socketRole = Context.Guild.EveryoneRole;
                     while (true)
                     {
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Channel.SendMessageAsync(cancelMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            return new SocketRoleRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         string content = response.Value.Content;
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Channel.SendMessageAsync(cancelMessage);
-                            return default(T);
+                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            return new SocketRoleRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         if (content.ToLower() == "skip")
-                            break;
+                            return new SocketRoleRequestResult { Type = RequestResultType.Skipped } as IRequestResult<T>;
 
                         if (!MentionUtils.TryParseRole(content, out ulong roleId))
                         {
-                            await Context.Channel.SendMessageAsync(parseFailedMessage);
+                            await Context.Interaction.FollowupAsync(parseFailedMessage);
                             continue;
                         }
 
                         var role = Context.Guild.GetRole(roleId);
                         if (role == null)
                         {
-                            await Context.Channel.SendMessageAsync("That role does not exist, please provide a valid role.");
+                            await Context.Interaction.FollowupAsync("That role does not exist, please provide a valid role.");
                             continue;
                         }
 
-                        socketRole = role;
-                        break;
+                        return new SocketRoleRequestResult { Type = RequestResultType.Success, Value = role } as IRequestResult<T>;
                     }
-                    return (T)Convert.ChangeType(socketRole, typeof(T));
+                default:
+                    throw new NotImplementedException($"{typeof(T).Name} is not supported by this method.");
             }
-
-            throw new NotImplementedException("This type could not be requested.");
         }
     }
 }
