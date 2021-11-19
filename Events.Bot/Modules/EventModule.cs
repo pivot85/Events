@@ -12,8 +12,10 @@ using Microsoft.Extensions.Configuration;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using TimeZoneNames;
 
 namespace Events.Bot.Modules
 {
@@ -59,34 +61,31 @@ namespace Events.Bot.Modules
             var messages = await eventsChannel.GetMessagesAsync(100).FlattenAsync();
             await eventsChannel.DeleteMessagesAsync(messages);
 
-            await Context.Guild.DeleteApplicationCommandsAsync();
-
             await Context.Channel.SendMessageAsync("Clean-up finished!");
         }
 
         [Command("new")]
         public async Task NewEventAsync()
         {
-            await Context.Interaction.DeferAsync();
-
             var permittedRoles = await PermittedRoleDataAccessLayer.GetAllByGuild(Context.Guild.Id);
             if (!await UserIsPermitted())
             {
-                await Context.Interaction.FollowupAsync("You are not allowed to create new events. Only administrators and permitted roles can.");
+                await Context.Interaction.RespondAsync("You are not allowed to create new events. Only administrators and permitted roles can.");
                 return;
             }
 
             if (Context.Guild.Channels.Count() > (GUILD_CHANNELS_CAP - REQUIRED_AVAILABLE_CHANNELS_COUNT) ||
                 Context.Guild.Roles.Count() > (GUILD_ROLES_CAP - REQUIRED_AVAILABLE_ROLES_COUNT))
             {
-                await Context.Interaction.FollowupAsync("This server is nearing the maximum amount of roles or channels, thus a new event cannot be created.");
+                await Context.Interaction.RespondAsync("This server is nearing the maximum amount of roles or channels, thus a new event cannot be created.");
                 return;
             }
 
+            await Context.Interaction.RespondAsync("Let's create a new event! If you want to cancel at any time, simply respond with \"cancel\".");
+
             var titleResult = await Ask<string>(
-                $"Let's create a new event. If you want to cancel at any time, you can respond with \"cancel\". " +
                 $"First, what would you like the title to be? The title must be shorter than {TITLE_CHAR_LIMIT} characters.",
-                max: TITLE_CHAR_LIMIT, 
+                max: TITLE_CHAR_LIMIT,
                 minMaxError: $"Please provide a title that is shorter than or equal to {TITLE_CHAR_LIMIT} characters.");
             if (titleResult.Type == RequestResultType.Cancelled)
                 return;
@@ -107,21 +106,26 @@ namespace Events.Bot.Modules
             if (shortNameResult.Type == RequestResultType.Cancelled)
                 return;
 
+            string tzid = TimeZoneInfo.Local.Id;
+            string lang = "en-US";
+            var timeZones = TZNames.GetAbbreviationsForTimeZone(tzid, lang);
+            var timeZone = TimeZoneInfo.Local.IsDaylightSavingTime(DateTime.Now) ? timeZones.Daylight : timeZones.Standard;
+
             var startResult = await Ask<DateTime>(
-                "All set. When should the event take place? Please format it as mm/dd/yyyy HH:MM:SS",
+                $"All set. When should the event take place? Please format it as `mm/dd/yyyy HH:MM:SS` ({timeZone}).",
                 minMaxError: "Please provide a properly formatted date and time for the start of the event.");
             if (startResult.Type == RequestResultType.Cancelled)
                 return;
 
             var durationResult = await Ask<TimeSpan>(
                 $"The event will start on {string.Format("{0:g}", startResult.Value)}. How long will the event last? Please provide the duration as HH:MM:SS.",
-                10, 
-                24, 
+                10,
+                24,
                 "Please provide a duration that is between 10 minutes and 24 hours.",
                 parseFailedMessage: "Please provide a duration formatted as HH:MM:SS.");
             if (durationResult.Type == RequestResultType.Cancelled)
                 return;
-            
+
             var stewardRole = await Context.Guild.CreateRoleAsync(shortNameResult.Value + " Steward", isHoisted: false, isMentionable: false);
             var stewardsResult = await Ask<List<RestGuildUser>>(
                 $"The event will last for {durationResult.Value.ToHoursMinutes()}. Do you want to add any stewards? Please mention them or respond with \"skip\".");
@@ -171,33 +175,47 @@ namespace Events.Bot.Modules
                     cosmeticRoleId = cosmeticRoleResult.Value.Id;
             }
 
-            var message = await Context.Channel.SendMessageAsync("All set! Time to create the event...");
+            var message = await Context.Channel.SendMessageAsync("All set! Let's put it all together...");
             try
             {
                 var attendeeRole = await Context.Guild.CreateRoleAsync(shortNameResult.Value + " Attendee", isHoisted: false, isMentionable: false);
                 var hostRole = await Context.Guild.CreateRoleAsync(shortNameResult.Value + " Host", isHoisted: false, isMentionable: false);
 
-                var categoryOverwrites = new List<Overwrite>();
-                categoryOverwrites.Add(new Overwrite(Context.Guild.EveryoneRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Deny)));
-                categoryOverwrites.Add(new Overwrite(hostRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
-                categoryOverwrites.Add(new Overwrite(stewardRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
-                categoryOverwrites.Add(new Overwrite(speakerRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
-                categoryOverwrites.Add(new Overwrite(attendeeRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)));
+                // Permission overwrites for the category of the event.
+                var categoryOverwrites = new List<Overwrite>()
+                {
+                    new Overwrite(Context.Guild.EveryoneRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Deny)),
+                    new Overwrite(hostRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)),
+                    new Overwrite(stewardRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)),
+                    new Overwrite(speakerRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)),
+                    new Overwrite(attendeeRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow))
+                };
 
+                // Creates a category channel and adds the text, voice and control channel of the event to it.
                 var category = await Context.Guild.CreateCategoryChannelAsync("Event " + shortNameResult.Value, x => x.PermissionOverwrites = categoryOverwrites);
                 var textChannel = await Context.Guild.CreateTextChannelAsync(shortNameResult.Value + "-general", x => x.CategoryId = category.Id);
                 var voiceChannel = await Context.Guild.CreateVoiceChannelAsync("Event " + shortNameResult.Value, x => x.CategoryId = category.Id);
                 var controlChannel = await Context.Guild.CreateTextChannelAsync(shortNameResult.Value + "-control", x => x.CategoryId = category.Id);
 
+                // Permission overwrites for the text channel of the event (attendees can view the channel but can't send messages.
                 await textChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Allow, sendMessages: PermValue.Deny));
+
+                // Permission overwrites for the voice channel of the event.
+                // Attendees can't connect, the host and stewards receive permissions to mute, deafen and move members.
+                // The speaker can connect but doesn't receive additional permissions.
                 await voiceChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Allow, connect: PermValue.Deny, speak: PermValue.Deny, stream: PermValue.Deny));
                 await voiceChannel.AddPermissionOverwriteAsync(hostRole, new OverwritePermissions(viewChannel: PermValue.Allow, muteMembers: PermValue.Allow, deafenMembers: PermValue.Allow, moveMembers: PermValue.Allow));
                 await voiceChannel.AddPermissionOverwriteAsync(stewardRole, new OverwritePermissions(viewChannel: PermValue.Allow, muteMembers: PermValue.Allow, deafenMembers: PermValue.Allow, moveMembers: PermValue.Allow));
                 await voiceChannel.AddPermissionOverwriteAsync(speakerRole, new OverwritePermissions(viewChannel: PermValue.Allow));
+
+                // Permissions overwrites for the control channel of the event. Attendees and speakers are denied access.
                 await controlChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Deny));
                 await controlChannel.AddPermissionOverwriteAsync(speakerRole, new OverwritePermissions(viewChannel: PermValue.Deny));
 
+                // Generates a random GUID for the event.
                 var eventId = Guid.NewGuid();
+
+                // The embed for the control panel, shown to the host and stewards.
                 var controlPanelBuilder = new EmbedBuilder()
                     .WithAuthor(x =>
                     {
@@ -205,44 +223,37 @@ namespace Events.Bot.Modules
                         .WithName($"Event {shortNameResult.Value}");
                     })
                     .WithColor(Colours.Primary)
-                    .AddField("ID", eventId, true)
-                    .AddField("Short ID", shortNameResult.Value, true)
+                    .AddField("Title", titleResult.Value, true)
+                    .AddField("Short name", shortNameResult.Value, true)
                     .AddField("Host", Context.User.Mention, true);
 
-                var eventPanelBuilder = new EmbedBuilder()
-                    .WithAuthor(x =>
-                    {
-                        x
-                        .WithIconUrl(Icons.Ticket)
-                        .WithName(titleResult.Value);
-                    })
-                    .WithDescription(descriptionResult.Value)
-                    .WithColor(Colours.Primary)
-                    .AddField("Start", string.Format("{0:g}", startResult.Value), true)
-                    .AddField("Duration", durationFormatted, true)
-                    .AddField("Organiser", Context.User.Mention, true)
-                    .WithFooter($"{shortNameResult.Value} · {eventId}");
-
-                if (speakersResult.Value.Count() > 0)
-                {
-                    eventPanelBuilder.AddField($"Speakers ({speakersResult.Value.Count()})", string.Join(" ", speakersResult.Value.Select(x => x.Mention)));
+                if (speakersResult.Type == RequestResultType.Success)
                     controlPanelBuilder.AddField($"Speakers ({speakersResult.Value.Count()})", string.Join(" ", speakersResult.Value.Select(x => x.Mention)));
-                }
-                
-                if (stewardsResult.Value.Count() > 0)
+
+                if (stewardsResult.Type == RequestResultType.Success)
                     controlPanelBuilder.AddField($"Stewards ({stewardsResult.Value.Count()})", string.Join(" ", stewardsResult.Value.Select(x => x.Mention)));
 
-                var eventPanelButtonsBuilder = new ComponentBuilder()
-                    .WithButton("Sign up", "sign_up", ButtonStyle.Success);
-
                 var controlPanelButtonsBuilder = new ComponentBuilder()
-                    .WithButton("Start", "start", ButtonStyle.Success)
-                    .WithButton("Stop", "stop", ButtonStyle.Danger)
-                    .WithButton("Mass mute", "mass_mute", ButtonStyle.Danger)
-                    .WithButton("Mass unmute", "mass_unmute", ButtonStyle.Danger);
+                    .WithButton("Start", "start", ButtonStyle.Success, row: 0)
+                    .WithButton("Stop", "stop", ButtonStyle.Danger, row: 0)
+                    .WithButton("Lock", "lock", ButtonStyle.Secondary, row: 1)
+                    .WithButton("Unlock", "unlock", ButtonStyle.Secondary, row: 1)
+                    .WithButton("Mass mute", "mass_mute", ButtonStyle.Secondary, row: 2)
+                    .WithButton("Mass unmute", "mass_unmute", ButtonStyle.Secondary, row: 2);
 
                 var eventsChannel = Context.Guild.GetTextChannel(Configuration.GetValue<ulong>("Events"));
-                var eventPanel = await eventsChannel.SendMessageAsync(embed: eventPanelBuilder.Build(), component: eventPanelButtonsBuilder.Build());
+                var guildEvent = await Context.Guild.CreateEventAsync(titleResult.Value,
+                    startResult.Value,
+                    GuildScheduledEventType.Voice,
+                    GuildScheduledEventPrivacyLevel.Private,
+                    descriptionResult.Value + $"\n\n" +
+                    $"This event is hosted by {Context.User.Mention}. " +
+                    (speakersResult.Type == RequestResultType.Success ? $"This event will have {speakersResult.Value.Count()} speaker(s): {string.Join(", ", speakersResult.Value.Select(x => x.Mention))}. " : "") +
+                    $"The expected duration is {durationResult.Value.ToHoursMinutes()}." +
+                    (cosmeticRoleId > 0 ? $" This event has a special role that you'll receive when attending: <@&{cosmeticRoleId}>." : ""),
+                    channelId: voiceChannel.Id);
+
+                await eventsChannel.SendMessageAsync($"A new event **{titleResult.Value}** was just created by {Context.User.Mention}! <{await guildEvent.GetUrlAsync()}>");
                 var controlPanel = await controlChannel.SendMessageAsync(embed: controlPanelBuilder.Build(), component: controlPanelButtonsBuilder.Build());
                 var @event = new Event
                 {
@@ -259,7 +270,6 @@ namespace Events.Bot.Modules
                     VoiceChannel = voiceChannel.Id,
                     ControlChannel = controlChannel.Id,
                     ControlPanel = controlPanel.Id,
-                    EventPanel = eventPanel.Id,
                     StewardRole = stewardRole.Id,
                     SpeakerRole = speakerRole.Id,
                     AttendeeRole = attendeeRole.Id,
@@ -276,6 +286,29 @@ namespace Events.Bot.Modules
             }
 
             await message.ModifyAsync(x => x.Content = $"Done! All roles and channels have been created for the event.");
+            var deleteResult = await Ask<string>(
+                "Do you want to delete all the messages related to this setup (yes/no)?",
+                acceptedResponses: new string[] { "yes", "no" });
+
+            if (deleteResult.Type != RequestResultType.Success)
+                return;
+
+            var originalResponse = await Context.Interaction.GetOriginalResponseAsync();
+            var messages = await Context.Channel.GetMessagesAsync(100).FlattenAsync();
+            messages = messages
+                .Where(x => x.CreatedAt >= originalResponse.CreatedAt &&
+                (x.Author.Id == Context.User.Id || x.Author.Id == Context.Client.CurrentUser.Id));
+
+            if (deleteResult.Value.ToLower() == "no")
+            {
+                await messages.First(x => x.Content.ToLower() == "no").AddReactionAsync(new Emoji("✅"));
+                return;
+            }
+
+            await (Context.Channel as ITextChannel).DeleteMessagesAsync(messages);
+            var deleteMessage = await Context.Channel.SendMessageAsync("Done! This messages will delete in 5 seconds...");
+            await Task.Delay(5000);
+            await deleteMessage.DeleteAsync();
         }
     }
 }

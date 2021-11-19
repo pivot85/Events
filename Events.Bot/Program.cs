@@ -24,7 +24,7 @@ namespace Events.Bot
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.Console()
-                .WriteTo.File("log-.txt", rollingInterval: RollingInterval.Hour)
+                .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Hour)
                 .CreateLogger();
 
             try

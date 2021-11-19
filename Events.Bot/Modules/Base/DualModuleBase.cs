@@ -227,10 +227,12 @@ namespace Events.Bot
             string cancelMessage = "Cancelled.",
             string timeOutMessage = "You didn't respond in time, please run the command again.",
             string parseFailedMessage = "Please provide a response containing the correct type.",
-            RequestCriterion criterion = RequestCriterion.None)
+            RequestCriterion criterion = RequestCriterion.None,
+            IEnumerable<string> acceptedResponses = null,
+            string notAcceptedMessage = "Please respond with one of the given options.")
         {
             if (!string.IsNullOrEmpty(question))
-                await Context.Interaction.FollowupAsync(question);
+                await Context.Channel.SendMessageAsync(question);
 
             switch (typeof(T))
             {
@@ -241,7 +243,7 @@ namespace Events.Bot
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Interaction.FollowupAsync(timeOutMessage);
+                            await Context.Channel.SendMessageAsync(timeOutMessage);
                             return new StringRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
@@ -249,20 +251,26 @@ namespace Events.Bot
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            await Context.Channel.SendMessageAsync(cancelMessage);
                             return new StringRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         if (max > 0 && content.Length > max)
                         {
-                            await Context.Interaction.FollowupAsync(minMaxError);
+                            await Context.Channel.SendMessageAsync(minMaxError);
                             continue;
                         }
 
                         if (criterion == RequestCriterion.ShortName &&
                             EventsDataAccessLayer.ShortNameExists(Context.Guild.Id, content))
                         {
-                            await Context.Interaction.FollowupAsync("That short name is already in use, please pick a different one.");
+                            await Context.Channel.SendMessageAsync("That short name is already in use, please pick a different one.");
+                            continue;
+                        }
+
+                        if (acceptedResponses != null && acceptedResponses.All(x => x.ToLower() != content.ToLower()))
+                        {
+                            await Context.Channel.SendMessageAsync(notAcceptedMessage);
                             continue;
                         }
 
@@ -276,7 +284,7 @@ namespace Events.Bot
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Interaction.FollowupAsync(timeOutMessage);
+                            await Context.Channel.SendMessageAsync(timeOutMessage);
                             return new DateTimeRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
@@ -284,26 +292,31 @@ namespace Events.Bot
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            await Context.Channel.SendMessageAsync(cancelMessage);
                             return new DateTimeRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         if (!DateTime.TryParse(content, out DateTime dateTime))
                         {
-                            await Context.Interaction.FollowupAsync(parseFailedMessage);
+                            await Context.Channel.SendMessageAsync(parseFailedMessage);
                             continue;
                         }
 
+                        if (dateTime <= DateTime.Now)
+                        {
+                            await Context.Channel.SendMessageAsync("Please provide a date that is in the future.");
+                            continue;
+                        }    
+
                         return new DateTimeRequestResult { Type = RequestResultType.Success, Value = dateTime } as IRequestResult<T>;
                     }
-                    
                 case var cls when cls == typeof(TimeSpan):
                     while (true)
                     {
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Interaction.FollowupAsync(timeOutMessage);
+                            await Context.Channel.SendMessageAsync(timeOutMessage);
                             return new TimeSpanRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
@@ -311,19 +324,19 @@ namespace Events.Bot
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            await Context.Channel.SendMessageAsync(cancelMessage);
                             return new TimeSpanRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
                         if (!TimeSpan.TryParse(content, out TimeSpan timeSpan))
                         {
-                            await Context.Interaction.FollowupAsync(parseFailedMessage);
+                            await Context.Channel.SendMessageAsync(parseFailedMessage);
                             continue;
                         }
 
                         if (timeSpan < TimeSpan.FromMinutes(min) || timeSpan >= TimeSpan.FromHours(max))
                         {
-                            await Context.Interaction.FollowupAsync(minMaxError);
+                            await Context.Channel.SendMessageAsync(minMaxError);
                             continue;
                         }
 
@@ -335,7 +348,7 @@ namespace Events.Bot
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Interaction.FollowupAsync(timeOutMessage);
+                            await Context.Channel.SendMessageAsync(timeOutMessage);
                             return new RestGuildUsersRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
@@ -343,7 +356,7 @@ namespace Events.Bot
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            await Context.Channel.SendMessageAsync(cancelMessage);
                             return new RestGuildUsersRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
@@ -365,6 +378,12 @@ namespace Events.Bot
                             users.Add(user);
                         }
 
+                        if (users.Count() == 0)
+                        {
+                            await Context.Channel.SendMessageAsync($"You didn't provide any valid users. Either respond with \"skip\" or mention at least one user.");
+                            continue;
+                        }
+
                         return new RestGuildUsersRequestResult { Type = RequestResultType.Success, Value = users } as IRequestResult<T>;
                     }
                 case var cls when cls == typeof(SocketRole):
@@ -373,7 +392,7 @@ namespace Events.Bot
                         var response = await NextMessageAsync();
                         if (response.IsTimeouted || response.Value == null)
                         {
-                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            await Context.Channel.SendMessageAsync(cancelMessage);
                             return new SocketRoleRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
@@ -381,7 +400,7 @@ namespace Events.Bot
 
                         if (content.ToLower() == "cancel")
                         {
-                            await Context.Interaction.FollowupAsync(cancelMessage);
+                            await Context.Channel.SendMessageAsync(cancelMessage);
                             return new SocketRoleRequestResult { Type = RequestResultType.Cancelled } as IRequestResult<T>;
                         }
 
@@ -390,14 +409,14 @@ namespace Events.Bot
 
                         if (!MentionUtils.TryParseRole(content, out ulong roleId))
                         {
-                            await Context.Interaction.FollowupAsync(parseFailedMessage);
+                            await Context.Channel.SendMessageAsync(parseFailedMessage);
                             continue;
                         }
 
                         var role = Context.Guild.GetRole(roleId);
                         if (role == null)
                         {
-                            await Context.Interaction.FollowupAsync("That role does not exist, please provide a valid role.");
+                            await Context.Channel.SendMessageAsync("That role does not exist, please provide a valid role.");
                             continue;
                         }
 
