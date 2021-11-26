@@ -78,6 +78,7 @@ namespace Events.Bot
                     })
                     .AddSingleton<PermittedRolesDataAccessLayer>()
                     .AddHostedService<CommandHandler>()
+                    .AddHostedService<ScheduledEventHandler>()
                     .AddHostedService<ApplicationCommandCoordinator>();
                 });
     }
