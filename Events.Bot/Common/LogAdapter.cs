@@ -20,7 +20,7 @@ using Discord.Addons.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Events.Bot.Utils
+namespace Events.Bot.Common
 {
     internal class LogAdapter<T> where T : class
     {

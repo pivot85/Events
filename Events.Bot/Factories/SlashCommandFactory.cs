@@ -12,15 +12,15 @@ namespace Events.Bot.Factories
         [GuildSpecificCommand(902654591710138408)]
         public override IEnumerable<ApplicationCommandProperties> BuildCommands()
         {
-            var pingCommand = new SlashCommandBuilder()
-                .WithName("ping")
-                .WithDescription("Ping for a pong!");
+            var newEventCommand = new SlashCommandBuilder()
+                .WithName("new")
+                .WithDescription("Create a new event interactively!");
 
-            var pongCommand = new SlashCommandBuilder()
-                .WithName("pong")
-                .WithDescription("poggers");
+            var clearCommand = new SlashCommandBuilder()
+                .WithName("clear")
+                .WithDescription("Clean-up all event related entities (temporary).");
 
-            return new ApplicationCommandProperties[] { pingCommand.Build(), pongCommand.Build() };
+            return new ApplicationCommandProperties[] { newEventCommand.Build(), clearCommand.Build() };
         }
     }
 }

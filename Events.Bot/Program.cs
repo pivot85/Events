@@ -3,7 +3,7 @@ using Discord;
 using Discord.Addons.Hosting;
 using Discord.WebSocket;
 using Events.Bot.Handlers;
-using Events.Bot.Utils;
+using Events.Bot.Common;
 using Events.Data.Context;
 using Events.Data;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Events.Data.DataAccessLayer;
+using Interactivity;
+using Events.Bot.Extensions;
 
 namespace Events.Bot
 {
@@ -22,7 +24,7 @@ namespace Events.Bot
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .WriteTo.Console()
-                .WriteTo.File("log-.txt", rollingInterval: RollingInterval.Hour)
+                .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Hour)
                 .CreateLogger();
 
             try
@@ -65,10 +67,16 @@ namespace Events.Bot
                     .AddDbContextFactory<EventsDbContext>(options =>
                             options
                             .UseMySql(
-                                context.Configuration.GetValue<string>("Database"),
+                                context.Configuration.GetConnectionString("Default"),
                                 new MySqlServerVersion(new Version(8, 0, 26))
                                 ))
-                        .AddSingleton<EventsDataAccessLayer>()
+                    .AddSingleton<EventsDataAccessLayer>()
+                    .AddSingleton<InteractivityService>()
+                    .AddSingleton(x => new InteractivityConfig
+                    { 
+                        DefaultTimeout = TimeSpan.FromMinutes(5)
+                    })
+                    .AddSingleton<PermittedRolesDataAccessLayer>()
                     .AddHostedService<CommandHandler>()
                     .AddHostedService<ApplicationCommandCoordinator>();
                 });

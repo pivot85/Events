@@ -11,50 +11,49 @@
     public interface IEventsDataAccessLayer
     {
         // Read
-        public Task<IEnumerable<Event>> GetAllEvents();
+        public Task<IEnumerable<Event>> GetAll();
 
-        public Task<Event> GetEventByGuidAsync(Guid eventId);
+        public Task<Event> GetById(ulong eventId);
 
-        public Task<IEnumerable<Event>> GetAllEventsByGuildAsync(ulong guild);
+        public Task<IEnumerable<Event>> GetAllByGuild(ulong guild);
 
-        public Task<IEnumerable<Event>> GetEventsByCompletionAsync(ulong guildId, bool completionStatus);
+        public Task<IEnumerable<Event>> GetByCompletion(ulong guildId, bool completionStatus);
 
-        public Task<Event> GetEventByTitle(ulong guildId, string title);
+        public Task<Event> GetByTitle(ulong guildId, string title);
+
+        public bool ShortNameExists(ulong guildId, string shortName);
 
         // Create
-        public Task CreateNewEvent(Guid eventId, ulong guildId, ulong organiser, string eventTitle,
-            DateTime eventStart,
-            TimeSpan eventDuration, ulong categoryId, ulong textChannelId, ulong voiceChannelId, ulong controlPanelId,
-            ulong stewardRoleId, ulong speakerRoleId, ulong attendeeRoleId, ulong cosmeticRoleId, bool eventComplete);
+        public Task Create(Event @event);
 
         // Update
-        public Task UpdateEventOrganiser(Guid eventId, ulong organiser);
+        public Task UpdateOrganiser(ulong eventId, ulong organiser);
 
-        public Task UpdateTitle(Guid eventId, string eventTitle);
+        public Task UpdateTitle(ulong eventId, string eventTitle);
 
-        public Task UpdateStart(Guid eventId, DateTime eventStart);
+        public Task UpdateStart(ulong eventId, DateTime eventStart);
 
-        public Task UpdateDuration(Guid eventId, TimeSpan eventDuration);
+        public Task UpdateDuration(ulong eventId, TimeSpan eventDuration);
 
-        public Task UpdateCategoryId(Guid eventId, ulong categoryId);
+        public Task UpdateCategory(ulong eventId, ulong categoryId);
 
-        public Task UpdateTextChannelId(Guid eventId, ulong textChannelId);
+        public Task UpdateTextChannel(ulong eventId, ulong textChannelId);
 
-        public Task UpdateVoiceChannelId(Guid eventId, ulong voiceChannelId);
+        public Task UpdateVoiceChannel(ulong eventId, ulong voiceChannelId);
 
-        public Task UpdateControlPanelId(Guid eventId, ulong controlPanelId);
+        public Task UpdateControlPanel(ulong eventId, ulong controlPanelId);
 
-        public Task UpdateStewardRoleId(Guid eventId, ulong stewardRoleId);
+        public Task UpdateStewardRole(ulong eventId, ulong stewardRoleId);
 
-        public Task UpdateSpeakerRoleId(Guid eventId, ulong speakerRoleId);
+        public Task UpdateSpeakerRole(ulong eventId, ulong speakerRoleId);
 
-        public Task UpdateAttendeeRoleId(Guid eventId, ulong attendeeRoleId);
+        public Task UpdateAttendeeRole(ulong eventId, ulong attendeeRoleId);
 
-        public Task UpdateCosmeticRoleId(Guid eventId, ulong cosmeticRoleId);
+        public Task UpdateCosmeticRole(ulong eventId, ulong cosmeticRoleId);
 
-        public Task UpdateEventCompletionStatus(Guid eventId, bool eventComplete);
+        public Task UpdateCompletionStatus(ulong eventId, bool eventComplete);
 
         // Delete
-        public Task DeleteEvent(Guid eventId);
+        public Task Delete(ulong eventId);
     }
 }

@@ -7,10 +7,11 @@
 
   <ItemGroup>
     <PackageReference Include="Discord.Addons.Hosting" Version="4.0.2-labs" />
-    <PackageReference Include="Discord.Net.Labs.Commands" Version="3.1.7" />
-    <PackageReference Include="Discord.Net.Labs.Core" Version="3.1.7" />
-    <PackageReference Include="Discord.Net.Labs.Rest" Version="3.1.7" />
-    <PackageReference Include="Discord.Net.Labs.WebSocket" Version="3.1.7" />
+    <PackageReference Include="Discord.InteractivityAddon" Version="2.4.0" />
+    <PackageReference Include="Discord.Net.Labs.Commands" Version="3.3.0" />
+    <PackageReference Include="Discord.Net.Labs.Core" Version="3.3.0" />
+    <PackageReference Include="Discord.Net.Labs.Rest" Version="3.3.0" />
+    <PackageReference Include="Discord.Net.Labs.WebSocket" Version="3.3.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
@@ -20,16 +21,17 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="TimeZoneNames" Version="4.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Events.Data\Events.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Events.Data\Events.Data.csproj" />
   </ItemGroup>
 
 </Project>
