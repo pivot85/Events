@@ -13,7 +13,7 @@
         // Read
         public Task<IEnumerable<Event>> GetAll();
 
-        public Task<Event> GetByGuid(Guid eventId);
+        public Task<Event> GetById(ulong eventId);
 
         public Task<IEnumerable<Event>> GetAllByGuild(ulong guild);
 
@@ -27,33 +27,33 @@
         public Task Create(Event @event);
 
         // Update
-        public Task UpdateOrganiser(Guid eventId, ulong organiser);
+        public Task UpdateOrganiser(ulong eventId, ulong organiser);
 
-        public Task UpdateTitle(Guid eventId, string eventTitle);
+        public Task UpdateTitle(ulong eventId, string eventTitle);
 
-        public Task UpdateStart(Guid eventId, DateTime eventStart);
+        public Task UpdateStart(ulong eventId, DateTime eventStart);
 
-        public Task UpdateDuration(Guid eventId, TimeSpan eventDuration);
+        public Task UpdateDuration(ulong eventId, TimeSpan eventDuration);
 
-        public Task UpdateCategory(Guid eventId, ulong categoryId);
+        public Task UpdateCategory(ulong eventId, ulong categoryId);
 
-        public Task UpdateTextChannel(Guid eventId, ulong textChannelId);
+        public Task UpdateTextChannel(ulong eventId, ulong textChannelId);
 
-        public Task UpdateVoiceChannel(Guid eventId, ulong voiceChannelId);
+        public Task UpdateVoiceChannel(ulong eventId, ulong voiceChannelId);
 
-        public Task UpdateControlPanel(Guid eventId, ulong controlPanelId);
+        public Task UpdateControlPanel(ulong eventId, ulong controlPanelId);
 
-        public Task UpdateStewardRole(Guid eventId, ulong stewardRoleId);
+        public Task UpdateStewardRole(ulong eventId, ulong stewardRoleId);
 
-        public Task UpdateSpeakerRole(Guid eventId, ulong speakerRoleId);
+        public Task UpdateSpeakerRole(ulong eventId, ulong speakerRoleId);
 
-        public Task UpdateAttendeeRole(Guid eventId, ulong attendeeRoleId);
+        public Task UpdateAttendeeRole(ulong eventId, ulong attendeeRoleId);
 
-        public Task UpdateCosmeticRole(Guid eventId, ulong cosmeticRoleId);
+        public Task UpdateCosmeticRole(ulong eventId, ulong cosmeticRoleId);
 
-        public Task UpdateCompletionStatus(Guid eventId, bool eventComplete);
+        public Task UpdateCompletionStatus(ulong eventId, bool eventComplete);
 
         // Delete
-        public Task Delete(Guid eventId);
+        public Task Delete(ulong eventId);
     }
 }

@@ -40,12 +40,11 @@
         /// </summary>
         /// <param name="eventId">The Id of the event that is requested.</param>
         /// <returns>A <see cref="Task"/> representing the result of the asynchronous operation.</returns>
-        public async Task<Event> GetByGuid(Guid eventId)
+        public async Task<Event> GetById(ulong eventId)
         {
             using var context = _contextFactory.CreateDbContext();
             return await context.Events
-                .Where(x => x.Id == eventId)
-                .FirstOrDefaultAsync();
+                .FindAsync(eventId);
         }
 
         /// <summary>
@@ -108,11 +107,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="organiser">The new Id of the organiser.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateOrganiser(Guid eventId, ulong organiser)
+        public async Task UpdateOrganiser(ulong eventId, ulong organiser)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -128,11 +127,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="title">The title of the event.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateTitle(Guid eventId, string title)
+        public async Task UpdateTitle(ulong eventId, string title)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -148,11 +147,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="eventStart">The start time of the event.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateStart(Guid eventId, DateTime eventStart)
+        public async Task UpdateStart(ulong eventId, DateTime eventStart)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -168,11 +167,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="eventDuration">The duration of the event.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateDuration(Guid eventId, TimeSpan eventDuration)
+        public async Task UpdateDuration(ulong eventId, TimeSpan eventDuration)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -188,11 +187,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="categoryId">The Id of the category of the event.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateCategory(Guid eventId, ulong categoryId)
+        public async Task UpdateCategory(ulong eventId, ulong categoryId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -208,11 +207,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="textChannelId">The Id of the Text Channel for the event.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateTextChannel(Guid eventId, ulong textChannelId)
+        public async Task UpdateTextChannel(ulong eventId, ulong textChannelId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -228,11 +227,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="voiceChannelId">The Id of the voice channel.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateVoiceChannel(Guid eventId, ulong voiceChannelId)
+        public async Task UpdateVoiceChannel(ulong eventId, ulong voiceChannelId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -248,11 +247,11 @@
         /// <param name="eventId">The Id of the event which the control panel belongs.</param>
         /// <param name="controlPanelId">The Id of the channel for the control panel.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateControlPanel(Guid eventId, ulong controlPanelId)
+        public async Task UpdateControlPanel(ulong eventId, ulong controlPanelId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -268,11 +267,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="stewardRoleId">The Id of the steward Role.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateStewardRole(Guid eventId, ulong stewardRoleId)
+        public async Task UpdateStewardRole(ulong eventId, ulong stewardRoleId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -288,11 +287,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="speakerRoleId">The Id of the Speaker Role.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateSpeakerRole(Guid eventId, ulong speakerRoleId)
+        public async Task UpdateSpeakerRole(ulong eventId, ulong speakerRoleId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -308,11 +307,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="attendeeRoleId">The Id of the attendee Role.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateAttendeeRole(Guid eventId, ulong attendeeRoleId)
+        public async Task UpdateAttendeeRole(ulong eventId, ulong attendeeRoleId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -328,11 +327,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="cosmeticRoleId">The Id of the cosmetic Role.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateCosmeticRole(Guid eventId, ulong cosmeticRoleId)
+        public async Task UpdateCosmeticRole(ulong eventId, ulong cosmeticRoleId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -348,11 +347,11 @@
         /// <param name="eventId">The Id of the event.</param>
         /// <param name="eventComplete">The status of if the event is completed.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-        public async Task UpdateCompletionStatus(Guid eventId, bool eventComplete)
+        public async Task UpdateCompletionStatus(ulong eventId, bool eventComplete)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToUpdate = await GetByGuid(eventId);
+            var eventToUpdate = await GetById(eventId);
             if (eventToUpdate is null)
             {
                 return;
@@ -367,11 +366,11 @@
         /// </summary>
         /// <param name="eventId">The id of the event to be deleted.</param>
         /// <returns>Nothing... Poof... its all gone! I Promise...</returns>
-        public async Task Delete(Guid eventId)
+        public async Task Delete(ulong eventId)
         {
             using var context = _contextFactory.CreateDbContext();
 
-            var eventToDelete = await GetByGuid(eventId);
+            var eventToDelete = await GetById(eventId);
             if (eventToDelete is null)
             {
                 return;

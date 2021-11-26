@@ -10,7 +10,7 @@
         /// <summary>
         /// Gets or Sets the Id of the event.
         /// </summary>
-        public Guid Id { get; set; }
+        public ulong Id { get; set; }
 
         /// <summary>
         /// Gets or Sets the Id of the guild the event is running in.
@@ -27,8 +27,14 @@
         /// </summary>
         public string Title { get; set; }
 
+        /// <summary>
+        /// Gets or sets the description of the event.
+        /// </summary>
         public string Description { get; set; }
 
+        /// <summary>
+        /// Gets or sets the short name of the event.
+        /// </summary>
         public string ShortName { get; set; }
 
         /// <summary>

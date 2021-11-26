@@ -106,9 +106,7 @@ namespace Events.Bot.Modules
             if (shortNameResult.Type == RequestResultType.Cancelled)
                 return;
 
-            string tzid = TimeZoneInfo.Local.Id;
-            string lang = "en-US";
-            var timeZones = TZNames.GetAbbreviationsForTimeZone(tzid, lang);
+            var timeZones = TZNames.GetAbbreviationsForTimeZone(TimeZoneInfo.Local.Id, "en-US");
             var timeZone = TimeZoneInfo.Local.IsDaylightSavingTime(DateTime.Now) ? timeZones.Daylight : timeZones.Standard;
 
             var startResult = await Ask<DateTime>(
@@ -175,7 +173,7 @@ namespace Events.Bot.Modules
                     cosmeticRoleId = cosmeticRoleResult.Value.Id;
             }
 
-            var message = await Context.Channel.SendMessageAsync("All set! Let's put it all together...");
+            var message = await Context.Channel.SendMessageAsync("That's it! Let's create your event...");
             try
             {
                 var attendeeRole = await Context.Guild.CreateRoleAsync(shortNameResult.Value + " Attendee", isHoisted: false, isMentionable: false);
@@ -184,11 +182,9 @@ namespace Events.Bot.Modules
                 // Permission overwrites for the category of the event.
                 var categoryOverwrites = new List<Overwrite>()
                 {
-                    new Overwrite(Context.Guild.EveryoneRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Deny)),
-                    new Overwrite(hostRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)),
-                    new Overwrite(stewardRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)),
-                    new Overwrite(speakerRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow)),
-                    new Overwrite(attendeeRole.Id, PermissionTarget.Role, new OverwritePermissions(viewChannel: PermValue.Allow))
+                    new Overwrite(Context.Guild.EveryoneRole.Id, PermissionTarget.Role, new OverwritePermissions(sendMessages: PermValue.Deny)),
+                    new Overwrite(hostRole.Id, PermissionTarget.Role, new OverwritePermissions(sendMessages: PermValue.Allow)),
+                    new Overwrite(stewardRole.Id, PermissionTarget.Role, new OverwritePermissions(sendMessages: PermValue.Allow)),
                 };
 
                 // Creates a category channel and adds the text, voice and control channel of the event to it.
@@ -197,20 +193,17 @@ namespace Events.Bot.Modules
                 var voiceChannel = await Context.Guild.CreateVoiceChannelAsync("Event " + shortNameResult.Value, x => x.CategoryId = category.Id);
                 var controlChannel = await Context.Guild.CreateTextChannelAsync(shortNameResult.Value + "-control", x => x.CategoryId = category.Id);
 
-                // Permission overwrites for the text channel of the event (attendees can view the channel but can't send messages.
-                await textChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Allow, sendMessages: PermValue.Deny));
-
                 // Permission overwrites for the voice channel of the event.
                 // Attendees can't connect, the host and stewards receive permissions to mute, deafen and move members.
                 // The speaker can connect but doesn't receive additional permissions.
-                await voiceChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Allow, connect: PermValue.Deny, speak: PermValue.Deny, stream: PermValue.Deny));
-                await voiceChannel.AddPermissionOverwriteAsync(hostRole, new OverwritePermissions(viewChannel: PermValue.Allow, muteMembers: PermValue.Allow, deafenMembers: PermValue.Allow, moveMembers: PermValue.Allow));
-                await voiceChannel.AddPermissionOverwriteAsync(stewardRole, new OverwritePermissions(viewChannel: PermValue.Allow, muteMembers: PermValue.Allow, deafenMembers: PermValue.Allow, moveMembers: PermValue.Allow));
-                await voiceChannel.AddPermissionOverwriteAsync(speakerRole, new OverwritePermissions(viewChannel: PermValue.Allow));
+                await voiceChannel.AddPermissionOverwriteAsync(Context.Guild.EveryoneRole, new OverwritePermissions(connect: PermValue.Deny, speak: PermValue.Deny, stream: PermValue.Deny));
+                await voiceChannel.AddPermissionOverwriteAsync(hostRole, new OverwritePermissions(muteMembers: PermValue.Allow, deafenMembers: PermValue.Allow, moveMembers: PermValue.Allow));
+                await voiceChannel.AddPermissionOverwriteAsync(stewardRole, new OverwritePermissions(muteMembers: PermValue.Allow, deafenMembers: PermValue.Allow, moveMembers: PermValue.Allow));
 
-                // Permissions overwrites for the control channel of the event. Attendees and speakers are denied access.
-                await controlChannel.AddPermissionOverwriteAsync(attendeeRole, new OverwritePermissions(viewChannel: PermValue.Deny));
-                await controlChannel.AddPermissionOverwriteAsync(speakerRole, new OverwritePermissions(viewChannel: PermValue.Deny));
+                // Permissions overwrites for the control channel of the event. Only the host and stewards can see this channel.
+                await controlChannel.AddPermissionOverwriteAsync(Context.Guild.EveryoneRole, new OverwritePermissions(viewChannel: PermValue.Deny));
+                await controlChannel.AddPermissionOverwriteAsync(stewardRole, new OverwritePermissions(viewChannel: PermValue.Allow));
+                await controlChannel.AddPermissionOverwriteAsync(hostRole, new OverwritePermissions(viewChannel: PermValue.Allow));
 
                 // Generates a random GUID for the event.
                 var eventId = Guid.NewGuid();
@@ -253,11 +246,11 @@ namespace Events.Bot.Modules
                     (cosmeticRoleId > 0 ? $" This event has a special role that you'll receive when attending: <@&{cosmeticRoleId}>." : ""),
                     channelId: voiceChannel.Id);
 
-                await eventsChannel.SendMessageAsync($"A new event **{titleResult.Value}** was just created by {Context.User.Mention}! <{await guildEvent.GetUrlAsync()}>");
+                await eventsChannel.SendMessageAsync($"A new event **{titleResult.Value}** was just created by {Context.User.Mention}!\n\n{await guildEvent.GetUrlAsync(voiceChannel.Id)}");
                 var controlPanel = await controlChannel.SendMessageAsync(embed: controlPanelBuilder.Build(), component: controlPanelButtonsBuilder.Build());
                 var @event = new Event
                 {
-                    Id = eventId,
+                    Id = guildEvent.Id,
                     Title = titleResult.Value,
                     Description = descriptionResult.Value,
                     ShortName = shortNameResult.Value,
